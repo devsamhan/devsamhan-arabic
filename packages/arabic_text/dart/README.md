@@ -1,142 +1,216 @@
 # arabic_text
 
-Arabic text normalization for Dart and Flutter.
-Zero runtime dependencies. Conformant with [devsamhan-arabic spec v1.0.0](https://github.com/devsamhan/devsamhan-arabic).
+مكتبة Dart لتطبيع النص العربي — تشكيل، ألفات، همزات، بحث، فرز.
 
-## What this package does
+بدون تبعيات خارجية. متوافقة مع [مواصفات devsamhan-arabic v1.0.0](https://github.com/devsamhan/devsamhan-arabic).
 
-- Removes tashkeel (short vowels, shadda, tanwin, sukun) and tatweel (kashida)
-- Normalizes Alef variants (أ إ آ ٱ → ا), hamza seats (ؤ ئ → ء), and Ya variants (ى ی → ي)
-- Converts Arabic Presentation Forms (FB50–FDFF, FE70–FEFF) to canonical Unicode
-- Generates search keys for database indexing and full-text search
-- Generates stable lexical sort keys for sorting Arabic strings
-- Normalizes names for deduplication and matching
-- Produces URL-safe Unicode Arabic slugs
-
-## What this package does NOT do
-
-- **No bidirectional (bidi) text reordering** — use the ICU bidi algorithm for display
-- **No terminal / visual reshaping** — Arabic letters are stored in logical order
-- **No spelling correction** — hamza placement is normalized for search, not corrected
-- **No full Arabic dictionary collation** — `sort()` is normalized Unicode lexical order, not Arabic alphabet order; a future `ArabicCollator` will handle that
-
-## Philosophy
-
-Conservative by default: no normalization happens unless explicitly requested — under-normalized is recoverable, over-normalized may corrupt names or legal text.
-
-## Installation
+## التثبيت
 
 ```yaml
 dependencies:
   arabic_text: ^1.0.0
 ```
 
-## Quick start
-
 ```dart
 import 'package:arabic_text/arabic_text.dart';
-
-// Remove tashkeel, normalize alef/hamza/ya — ready for database indexing
-ArabicText.toSearchKey('مُحَمَّدٌ');           // → 'محمد'
-ArabicText.toSearchKey('أَبُو ظَبْيٍ');       // → 'ابو ظبي'
-
-// Remove tatweel only, keep tashkeel — safe for display
-ArabicText.toDisplayKey('مـحـمـد');           // → 'محمد'
-
-// URL-safe Unicode slug
-ArabicText.toSlug('مدينة الرياض');            // → 'مدينه-الرياض'
-
-// Name deduplication — keeps ى and ة; normalizes Persian ی → ي
-ArabicText.normalizeName('فَاطِمَةُ');         // → 'فاطمة'
 ```
 
-## toSearchKey vs toLooseSearchKey
+---
 
-`toSearchKey` preserves ة. `toLooseSearchKey` converts ة → ه.
+## لماذا هذه المكتبة؟
+
+النص العربي يُكتب بأشكال متعددة لنفس الكلمة:
+
+- `مُحَمَّد` (مشكول) ≠ `محمد` (بدون تشكيل)
+- `فاطمة` (تاء مربوطة) ≠ `فاطمه` (هاء عادية)
+- `أحمد` (همزة فوق) ≠ `احمد` (ألف مجردة)
+- `مـحـمـد` (مع تطويل) ≠ `محمد` (بدون تطويل)
+
+المقارنة الحرفية المباشرة ستُخفق مع كل هذه الاختلافات. هذه المكتبة تُنتج **مفاتيح موحدة** تجعل جميع هذه الأشكال تشير إلى السجل نفسه في قاعدة البيانات.
+
+---
+
+## الاستخدام السريع
+
+### `toSearchKey` — مفتاح البحث للتخزين
+
+يُزيل التشكيل والتطويل، ويُوحّد الألف والهمزة والياء. **يحافظ على التاء المربوطة (ة).**
 
 ```dart
-ArabicText.toSearchKey('فَاطِمَةُ');      // → 'فاطمة'
-ArabicText.toLooseSearchKey('فَاطِمَةُ'); // → 'فاطمه'
+ArabicText.toSearchKey('مُحَمَّدٌ');       // → 'محمد'
+ArabicText.toSearchKey('أَبُو ظَبْيٍ');   // → 'ابو ظبي'
+ArabicText.toSearchKey('إِبْرَاهِيمُ');   // → 'ابراهيم'
+ArabicText.toSearchKey('فاطمة العلي');   // → 'فاطمة العلي'
 ```
 
-Use `toLooseSearchKey` only for normalizing the incoming search query — never
-for storage. This lets فاطمة and فاطمه match the same records regardless of
-how the user typed the name.
+### `toLooseSearchKey` — مفتاح البحث المتساهل (للاستعلام فقط)
 
-## Database pattern
+مثل `toSearchKey` لكنه يُحوّل **ة → ه** أيضاً. استخدمه على جانب الاستعلام لقبول كلا الشكلين.
 
 ```dart
-// Store — preserves ة in the indexed key
-user.searchKey = ArabicText.toSearchKey(user.name);
-
-// Search — converts ة → ه on both sides so variants match
-db.where('search_key = ?', [ArabicText.toLooseSearchKey(query)]);
+ArabicText.toLooseSearchKey('فاطمة العلي'); // → 'فاطمه العلي'
+ArabicText.toLooseSearchKey('فاطمه');       // → 'فاطمه'
+// كلاهما ينتج 'فاطمه' — المطابقة ستنجح
 ```
 
-## Sorting
+### `toDisplayKey` — للعرض في الواجهة
+
+يُزيل التطويل فقط. يحافظ على التشكيل والهمزة وجميع الأحرف.
 
 ```dart
-ArabicText.sort(['يوسف', 'أحمد', 'إبراهيم', 'محمد', 'آدم']);
-// → ['إبراهيم', 'أحمد', 'آدم', 'محمد', 'يوسف']
+ArabicText.toDisplayKey('مـحـمـد  الأحـمـد'); // → 'محمد الأحمد'
 ```
 
-**Warning:** `sort()` produces normalized Unicode lexical order, not Arabic
-dictionary order. The definite article (ال) is not stripped, and ة / ه sort
-separately. Do not advertise this as "Arabic alphabetical order."
+### `toSlug` — معرّف URL عربي
 
-## Spec version
+يُنتج رابطاً آمناً يحتوي على أحرف عربية يونيكود (وليس تحويلاً لاتينياً).
 
 ```dart
-print(ArabicText.specVersion); // '1.0.0'
-assert(ArabicText.specVersion == '1.0.0', 'unexpected spec version');
+ArabicText.toSlug('مدينة الرياض');       // → 'مدينه-الرياض'
+ArabicText.toSlug('محمد الأحمد');        // → 'محمد-الاحمد'
+ArabicText.toSlug('أبرز الأحداث 2024'); // → 'ابرز-الاحداث-2024'
 ```
 
-## API reference
+### `normalizeName` — تطبيع الأسماء
 
-### ArabicText class (recommended)
+للمطابقة وإلغاء التكرار. يُزيل التشكيل والتطويل، يُوحّد الألف والهمزة. **لا يُحوّل ة→ه ولا ى→ي** (ذات معنى في الأسماء).
 
-| Method | Description |
+```dart
+ArabicText.normalizeName('مُحَمَّد');    // → 'محمد'
+ArabicText.normalizeName('فَاطِمَةُ');  // → 'فاطمة'
+ArabicText.normalizeName('إِبْرَاهِيم'); // → 'ابراهيم'
+```
+
+### `sort` و `compare` — الترتيب
+
+```dart
+final names = ['يوسف', 'أحمد', 'إبراهيم', 'محمد', 'آدم'];
+final sorted = ArabicText.sort(names);
+// → ['ابراهيم', 'احمد', 'ادم', 'محمد', 'يوسف']
+// (بعد تطبيع الألف في الفرز)
+
+// للفرز اليدوي:
+names.sort(ArabicText.compare);
+```
+
+> **تحذير:** هذا ترتيب معجمي يونيكود بعد التطبيع، وليس ترتيباً قاموسياً عربياً كاملاً. ال التعريف لا يُحذف. `ArabicCollator` الكامل مقرر في إصدار مستقبلي.
+
+### `removeTashkeel` — حذف التشكيل
+
+```dart
+ArabicText.removeTashkeel('مُحَمَّد');   // → 'محمد'
+ArabicText.removeTashkeel('بِسْمِ اللَّهِ'); // → 'بسم الله'
+```
+
+### `normalizeAlef` — توحيد الألف
+
+```dart
+ArabicText.normalizeAlef('أحمد');    // → 'احمد'
+ArabicText.normalizeAlef('إبراهيم'); // → 'ابراهيم'
+ArabicText.normalizeAlef('آمنة');    // → 'امنة'
+```
+
+---
+
+## الفرق بين `toSearchKey` و `toLooseSearchKey`
+
+| | `toSearchKey('فاطمة')` | `toLooseSearchKey('فاطمة')` |
+|---|---|---|
+| النتيجة | `فاطمة` | `فاطمه` |
+| يطابق `فاطمه`؟ | ❌ | ✅ |
+
+```dart
+// ❌ بحث صارم — يفشل إذا كتب المستخدم 'فاطمه'
+final stored = ArabicText.toSearchKey('فاطمة العلي'); // 'فاطمة العلي'
+final query  = ArabicText.toSearchKey('فاطمه');       // 'فاطمه'
+stored.contains(query); // false
+
+// ✅ بحث متساهل — ينجح مع كلا الشكلين
+final stored2 = ArabicText.toLooseSearchKey('فاطمة العلي'); // 'فاطمه العلي'
+final query2  = ArabicText.toLooseSearchKey('فاطمه');       // 'فاطمه'
+stored2.contains(query2); // true
+```
+
+**القاعدة:** طبّق `toLooseSearchKey` على **الطرفين** — الاستعلام والبيانات — أو لا تستخدمه على أي منهما.
+
+---
+
+## نمط قاعدة البيانات
+
+خزّن النص الأصلي ومفتاح البحث في عمودين منفصلين. **لا تستبدل النص الأصلي أبداً.**
+
+```dart
+// عند الحفظ في Supabase:
+Future<void> saveStudent(String name) async {
+  await supabase.from('students').insert({
+    'name': name,                               // النص الأصلي للعرض
+    'search_key': ArabicText.toSearchKey(name), // مفتاح البحث للاستعلام
+  });
+}
+
+// عند البحث (مطابقة متساهلة تقبل فاطمة وفاطمه):
+Future<List<Map>> searchStudents(String query) async {
+  final key = ArabicText.toLooseSearchKey(query);
+  return await supabase
+      .from('students')
+      .select()
+      .ilike('search_key', '%$key%');
+}
+```
+
+```sql
+-- إنشاء الجدول:
+CREATE TABLE students (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        text NOT NULL,
+  search_key  text NOT NULL,
+  created_at  timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_students_search ON students (search_key text_pattern_ops);
+```
+
+---
+
+## مرجع الـ API
+
+| الدالة | الوصف |
 |---|---|
-| `toSearchKey(text)` | Normalized key for storage/indexing. Preserves ة. |
-| `toLooseSearchKey(text)` | Like toSearchKey + ة→ه. Query side only. |
-| `toDisplayKey(text)` | Removes tatweel only. Preserves tashkeel and hamza. |
-| `toSlug(text)` | URL-safe Unicode slug. |
-| `normalizeName(text)` | Name deduplication. Keeps ى and ة. |
-| `toSortKey(text)` | Normalized lexical sort key. Not locale-aware collation. |
-| `sort(list)` | Stable lexical sort over toSortKey. |
-| `compare(a, b)` | Returns -1, 0, or 1 by sort key. |
-| `normalizePresentationForms(text)` | FB50–FDFF, FE70–FEFF → canonical. |
-| `removeTashkeel(text)` | Remove all diacritics. |
-| `removeTatweel(text)` | Remove U+0640. Preserves Quranic ـٰ. |
+| `toSearchKey(text)` | مفتاح بحث للتخزين. يحافظ على ة. |
+| `toLooseSearchKey(text)` | مثل toSearchKey + ة→ه. للاستعلام فقط. |
+| `toDisplayKey(text)` | يُزيل التطويل فقط. يحافظ على التشكيل. |
+| `toSlug(text)` | معرّف URL عربي آمن. |
+| `normalizeName(text)` | تطبيع الأسماء. يحافظ على ى و ة. |
+| `toSortKey(text)` | مفتاح فرز معجمي. |
+| `sort(list)` | ترتيب قائمة بـ toSortKey. |
+| `compare(a, b)` | مقارنة — يُعيد ‎-1 أو 0 أو 1. |
+| `removeTashkeel(text)` | حذف جميع علامات الشكل. |
+| `removeTatweel(text)` | حذف التطويل U+0640. |
 | `normalizeAlef(text)` | أ إ آ ٱ → ا |
 | `normalizeHamza(text)` | ؤ ئ → ء |
 | `normalizeYa(text)` | ى ی → ي |
-| `normalizeTaMarbouta(text)` | ة → ه. Explicit-only. |
-| `normalizeDigits(text, to:)` | `'western'` or `'eastern'`. |
-| `isArabic(text)` | true if any Arabic code point present. |
-| `arabicRatio(text)` | Fraction of Arabic code points (0.0–1.0). |
+| `normalizeTaMarbouta(text)` | ة → ه. يجب استدعاؤها صراحةً. |
+| `normalizeDigits(text, to:)` | تحويل الأرقام: `'western'` أو `'eastern'`. |
+| `normalizePresentationForms(text)` | أشكال العرض FB50–FEFF → يونيكود قياسي. |
+| `isArabic(text)` | true إذا كان النص يحتوي على أي حرف عربي. |
+| `arabicRatio(text)` | نسبة الأحرف العربية (0.0–1.0). |
 | `specVersion` | `'1.0.0'` |
 
-### ArabicNormalizeOptions
-
-For precise control over which normalizations apply:
+### `ArabicNormalizeOptions` — تحكم دقيق
 
 ```dart
-normalize(text, ArabicNormalizeOptions(
+ArabicText.normalize(text, const ArabicNormalizeOptions(
   removeTashkeel: true,
   normalizeAlef: true,
-  normalizeTaMarbouta: true,   // must be explicit
+  normalizeTaMarbouta: true, // يجب التصريح به
   normalizeDigits: 'western',
 ));
 ```
 
-All flags default to `false` (most conservative). `normalizePresentationForms`
-defaults to `true`.
+جميع الخيارات افتراضها `false` (أكثر تحفظاً). `normalizePresentationForms` افتراضها `true`.
 
-## Spec
+---
 
-Full behavioral specification: [`SPEC.md`](https://github.com/devsamhan/devsamhan-arabic/blob/main/claude/SPEC.md)
+## الترخيص
 
-## License
-
-MIT
+MIT — [Devsamhan](https://github.com/devsamhan)

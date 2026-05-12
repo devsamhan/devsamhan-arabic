@@ -1,152 +1,189 @@
 # arabic_bidi
 
-Arabic terminal display helpers for Dart.
+مساعد عرض النص العربي في الطرفية — ربط الحروف، كشف الاتجاه، تسجيل آمن.
 
-## What it does
+جزء من مجموعة [devsamhan-arabic](https://github.com/devsamhan/devsamhan-arabic).
 
-- Reshape Arabic letters to correct contextual forms (isolated / initial / medial / final)
-- Detect text direction (RTL / LTR / mixed)
-- Prepare Arabic text for LTR terminal display (run-level reordering)
+---
 
-## What it does NOT do
+## متى تستخدمها؟
 
-- **No full Unicode Bidirectional Algorithm (UAX #9)** — paragraph-level reordering is not implemented
-- **No Flutter / browser / web UI rendering** — modern platforms handle Arabic natively, no library needed there
-- **No normalization** — use [arabic_text](https://pub.dev/packages/arabic_text) for tashkeel removal, alef normalization, search keys, etc.
+**استخدمها في:**
+- أدوات CLI مكتوبة بـ Dart
+- سكريبتات التشغيل الآلي
+- السجلات (logs) في الطرفية
+- أي بيئة يظهر فيها النص العربي كحروف منفصلة
 
-## When to use it
+**لا تستخدمها في:**
+- تطبيقات Flutter — Flutter يرسم العربية صحيحاً بشكل تلقائي
+- تطبيقات الويب والمتصفحات
+- أي واجهة مستخدم رسومية
 
-Use `arabic_bidi` for: CLI tools, dart scripts, terminal logging, server-side log output, any environment where Arabic text renders as disconnected letters.
+> إذا طبّقت `prepareForTerminal` على نص ستعرضه في Flutter `Text` widget، ستحصل على نص مشوه لأن Flutter سيُطبّق خوارزمية BiDi الخاصة به فوق التحويل.
 
-**Do NOT use `arabic_bidi` for Flutter apps, web apps, or any platform that natively supports Arabic text rendering.**
+---
 
-## Quick start
+## التثبيت
+
+```yaml
+dependencies:
+  arabic_bidi: ^1.0.0
+```
+
+```dart
+import 'package:arabic_bidi/arabic_bidi.dart';
+```
+
+---
+
+## الاستخدام
+
+### `reshape` — ربط الحروف
+
+يُطبّق التشكيل السياقي: يصل الحروف ببعضها باستخدام أشكال البداية/الوسط/النهاية/المفردة. **لا يُعيد ترتيب النص.**
+
+```dart
+// الحروف تبدو منفصلة في الطرفية → تصبح متصلة بعد reshape
+final shaped = ArabicBidi.reshape('محمد');
+print(shaped); // الحروف الآن بأشكال العرض الصحيحة
+```
+
+**دمج لام-ألف (اختياري):**
+
+```dart
+// افتراضي — بدون دمج (أكثر توافقاً مع الخطوط)
+ArabicBidi.reshape('السلام');
+
+// مع دمج لام-ألف
+ArabicBidi.reshape('السلام',
+    options: const ArabicReshapeOptions(useLamAlefLigatures: true));
+```
+
+---
+
+### `prepareForTerminal` — الإعداد الكامل للطرفية
+
+يُعيد تشكيل النص وعكس ترتيب الكتل عند الحاجة. هذه هي الدالة الرئيسية للاستخدام العملي.
 
 ```dart
 import 'package:arabic_bidi/arabic_bidi.dart';
 
-// Reshape only — correct letter forms, no reordering
-ArabicBidi.reshape('محمد');             // → connected presentation forms
+void main() {
+  final lines = [
+    'السلام عليكم',
+    'Error في الملف',
+    'تم حفظ file.txt بنجاح',
+    'الطلب رقم 123',
+  ];
 
-// Full terminal preparation — reshape + best-effort run reordering
-ArabicBidi.prepareForTerminal('السلام عليكم');  // → shaped + reordered for LTR
-
-// Print directly to stdout
-ArabicBidi.printArabic('مرحبا بالعالم');
-
-// Direction detection
-ArabicBidi.isRTL('مرحبا');                      // true
-ArabicBidi.detectDirection('Hello مرحبا World'); // Direction.mixed
+  for (final line in lines) {
+    print(ArabicBidi.prepareForTerminal(line));
+  }
+}
 ```
 
-## Lam-Alef ligatures
-
-Lam-alef ligature substitution (ل+ا → ﻻ) is opt-in. Disabled by default
-because not all terminal fonts render Presentation Forms correctly.
+**نص مختلط عربي/لاتيني:** عندما لا تريد عكس الترتيب (مثل سطور السجل التي تحتوي على رموز خطأ ثابتة):
 
 ```dart
-// Default — no ligatures (cross-platform safe)
-ArabicBidi.reshape('السلام');
-// → ا_iso + ل_ini + س_med + ل_med + ا_fin + م_iso
-
-// Opt-in ligatures
-ArabicBidi.reshape('السلام',
-    options: const ArabicReshapeOptions(useLamAlefLigatures: true));
-// → ا_iso + ل_ini + س_med + [لا final ligature] + م_iso
-```
-
-Supported lam-alef pairs: `لا لأ لإ لآ`
-
-## Mixed text
-
-When Arabic and Latin text appear together, use `reorder: false` if the
-Latin portion must stay anchored in place (e.g. log lines with error codes).
-
-```dart
-// Default — Arabic-dominant text gets run-level reordering
+// افتراضي — يعكس الترتيب عند أغلبية العربية
 ArabicBidi.prepareForTerminal('ملف 123 محفوظ');
-// → محفوظ 123 ملف  (runs reversed; "123" moves as a unit)
 
-// reorder: false — shape only, keep original run order
+// بدون عكس الترتيب
 ArabicBidi.prepareForTerminal(
   'Error في الملف',
   options: const ArabicTerminalOptions(reorder: false),
 );
-// → Error في_shaped الملف_shaped  (no run reversal)
 ```
 
-Arabic-dominant = Arabic letter fraction **> 0.5** (strict majority).
-Tashkeel, tatweel, and digit code points are not counted toward the ratio.
+---
 
-Numeric runs (ASCII `0–9`, Eastern Arabic `٠–٩`, Persian `۰–۹`) are never
-reshaped and move as a unit during run reversal.
+### `detectDirection` — كشف اتجاه النص
 
-## Logger
+يُعيد `Direction.rtl` أو `Direction.ltr` أو `Direction.mixed`.
 
-Drop-in Arabic-aware logger for CLI apps and scripts.
+- **rtl** — عندما تكون ≥ 80% من الحروف عربية
+- **ltr** — عندما تكون ≥ 80% من الحروف لاتينية
+- **mixed** — عندما لا يصل أي منهما إلى 80%
+
+```dart
+ArabicBidi.detectDirection('السلام عليكم');     // Direction.rtl
+ArabicBidi.detectDirection('Hello World');       // Direction.ltr
+ArabicBidi.detectDirection('Error في الملف');   // Direction.mixed
+
+ArabicBidi.isRTL('مرحبا'); // true
+```
+
+---
+
+### `wrapForTerminal` — لفّ النص
+
+يلفّ النص عند حدود الكلمات بحيث لا يتجاوز عرض الطرفية.
+
+```dart
+final text = 'هذا نص طويل يحتاج إلى تقطيع عند عرض معين في الطرفية';
+final wrapped = ArabicBidi.wrapForTerminal(text, width: 30);
+print(ArabicBidi.prepareForTerminal(wrapped));
+```
+
+---
+
+### `ArabicLogger` — مسجّل عربي للـ CLI
+
+يُطبّق `prepareForTerminal` تلقائياً على كل رسالة. تنسيق الإخراج: `[timestamp?][prefix?][LEVEL] message`
 
 ```dart
 import 'package:arabic_bidi/arabic_bidi.dart';
 
-// Use default instance
-arabicLogger.info('تم التشغيل بنجاح');
-arabicLogger.error('خطأ في الاتصال');
+void main() {
+  // المتغير الجاهز (بدون بادئة أو توقيت):
+  arabicLogger.info('تم التشغيل بنجاح');
+  arabicLogger.warn('تحذير: الذاكرة ممتلئة');
+  arabicLogger.error('فشل الاتصال بقاعدة البيانات');
+  arabicLogger.debug('رسالة تشخيصية');
 
-// Custom prefix
-final log = ArabicLogger(prefix: 'MyApp');
-log.warn('تحذير: الذاكرة ممتلئة');
+  // مع بادئة:
+  final log = ArabicLogger(prefix: 'قاعدة البيانات');
+  log.info('تم الاتصال');
+  // الإخراج: [قاعدة البيانات][INFO] <النص>
 
-// With timestamp
-final log = ArabicLogger(useTimestamp: true);
-log.info('بدء المعالجة');
+  // مع توقيت ISO-8601:
+  final timedLog = ArabicLogger(useTimestamp: true, prefix: 'نظام');
+  timedLog.info('بدأ التطبيق');
+  // الإخراج: [2026-05-12 14:30:00][نظام][INFO] <النص>
+}
 ```
 
-Output format:
+---
 
-```
-[INFO] مرحبا
-[ERROR] خطأ في الاتصال
-[MyApp][WARN] تحذير
-[2024-01-01 12:00:00][INFO] رسالة
-```
+## القيود المعروفة
 
-## Known limitations
+> **تحذير:** `arabic_bidi` ليست تطبيقاً كاملاً لخوارزمية Unicode BiDi (UAX #9).
 
-- Reordering is run-level, not paragraph-level (not UAX #9)
-- Punctuation adjacent to Arabic text may render unexpectedly
-- Mixed Arabic / Latin lines: use `reorder: false` if Latin must stay anchored
-- Arabic signs U+0600–U+0620 are treated as punctuation-like runs (v1)
-- Not a replacement for UAX #9
+| القيد | التفاصيل |
+|---|---|
+| إعادة الترتيب | على مستوى الكتل (run-level)، وليس على مستوى الفقرات (paragraph-level) |
+| `getVisualOrder` | غير مُنفَّذة — تُعيد النص دون تغيير |
+| علامات الترقيم | قد لا تُعرض صحيحاً بجانب النص العربي |
+| النص المختلط | استخدم `reorder: false` إذا كان الجزء اللاتيني يجب أن يبقى في مكانه |
+| الخطوط | النتائج تختلف باختلاف محاكي الطرفية والخط المستخدم |
 
-## Joining capability reference
+**الطرفيات المدعومة:** Windows Terminal، xterm، iTerm2، وأي طرفية تدعم Unicode وخطوط عربية.
 
-| Type | joinsRight | joinsLeft | Letters |
-|------|-----------|-----------|---------|
-| D (dual) | ✓ | ✓ | ب ت ث ج ح خ س ش ص ض ط ظ ع غ ف ق ك ل م ن ه ي ئ ة |
-| R (right) | ✗ | ✓ | ا أ إ آ د ذ ر ز و ؤ ى |
-| U (none) | ✗ | ✗ | ء |
-| Transparent | — | — | tashkeel (U+064B–U+065F), tatweel (U+0640) |
+**الطرفيات غير المدعومة:** الطرفيات القديمة التي لا تدعم Unicode، والـ CMD القديم بدون خط عربي.
 
-## Form selection rules
+---
 
-```
-medial   = prevJoinsRight ∧ selfJoinsLeft ∧ selfJoinsRight ∧ nextJoinsLeft
-final    = prevJoinsRight ∧ selfJoinsLeft ∧ ¬(selfJoinsRight ∧ nextJoinsLeft)
-initial  = ¬prevJoinsRight ∧ selfJoinsRight ∧ nextJoinsLeft
-isolated = otherwise
-```
+## مرجع ربط الحروف
 
-## Coverage
+| النوع | يتصل يميناً | يتصل يساراً | أمثلة |
+|---|---|---|---|
+| D (ثنائي) | ✓ | ✓ | ب ت ث ج ح س ش ص ع ف ق ك ل م ن ه ي |
+| R (يميني) | ✗ | ✓ | ا د ذ ر ز و ى |
+| U (منفصل) | ✗ | ✗ | ء |
+| شفاف | — | — | التشكيل، التطويل |
 
-- U+0621–U+063A (ء–غ) and U+0641–U+064A (ف–ي): full contextual forms
-- U+064B–U+065F tashkeel: transparent (preserved in output)
-- U+0640 tatweel: transparent (preserved in output)
-- U+063B–U+063F rare extended letters: pass through unchanged
+---
 
-## Spec
+## الترخيص
 
-Part of the [devsamhan-arabic](https://github.com/devsamhan/devsamhan-arabic) library suite.
-
-## License
-
-MIT
+MIT — [Devsamhan](https://github.com/devsamhan)

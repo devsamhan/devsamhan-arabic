@@ -1,134 +1,304 @@
 # flutter_arabic_ui
 
-Arabic-first Flutter UI components — RTL text fields, search, number input,
-formatters, controllers, and validators.
+مكوّنات Flutter مبنية للعربية — حقول نص، بحث، أرقام، تحقق، controllers.
 
-Part of the [devsamhan-arabic](https://github.com/devsamhan/devsamhan-arabic) monorepo.
+بدون آراء تصميمية. كل شيء يمر إلى `TextField` الأصلي كما هو.
+
+جزء من مجموعة [devsamhan-arabic](https://github.com/devsamhan/devsamhan-arabic).
 
 ---
 
-## Widgets
+## التثبيت
 
-### ArabicTextField
-
-RTL [TextField] with optional live normalization.
+```yaml
+dependencies:
+  flutter_arabic_ui: ^1.0.0
+```
 
 ```dart
+import 'package:flutter_arabic_ui/flutter_arabic_ui.dart';
+```
+
+---
+
+## المكوّنات
+
+### `ArabicTextField`
+
+حقل إدخال عربي مع RTL تلقائي وخيار التطبيع الحي.
+
+```dart
+// بدون تطبيع — النص يبقى كما يكتبه المستخدم
 ArabicTextField(
-  autoNormalize: true,   // strips tashkeel and tatweel on every keystroke
+  controller: _controller,
+  decoration: const InputDecoration(
+    labelText: 'اسم الطالب',
+    border: OutlineInputBorder(),
+  ),
   onChanged: (text) => print(text),
+)
+
+// مع تطبيع تلقائي — يُزيل التشكيل والتطويل عند كل ضغطة
+ArabicTextField(
+  controller: _controller,
+  autoNormalize: true,
+  normalizeOptions: const ArabicNormalizeOptions(
+    removeTashkeel: true,
+    removeTatweel: true,
+    normalizeAlef: true,
+  ),
+  decoration: const InputDecoration(
+    labelText: 'بحث',
+    border: OutlineInputBorder(),
+  ),
 )
 ```
 
-### ArabicSearchField
+> **تحذير:** لا تُفعّل `autoNormalize: true` في حقول الأسماء إذا كنت تريد حفظ الاسم بشكله الأصلي. التطبيع التلقائي يُغيّر النص المرئي للمستخدم مباشرةً.
 
-RTL search field with live search-key derivation.
+---
+
+### `ArabicSearchField`
+
+حقل بحث يُولّد مفتاح بحث معياراً في كل تغيير.
+
+- `onChanged` — يُعطيك النص الخام كما كتبه المستخدم
+- `onSearchKeyChanged` — يُعطيك `toSearchKey(raw)` جاهزاً للاستعلام
 
 ```dart
 ArabicSearchField(
-  onSearchKeyChanged: (key) => query(key),  // receives toSearchKey(raw)
-  normalizeVisibleText: false,              // default: visible text stays raw
+  onChanged: (rawText) {
+    // النص كما كتبه المستخدم
+  },
+  onSearchKeyChanged: (searchKey) {
+    // مفتاح البحث المُعيَّر — استخدمه للاستعلام
+    _filterList(searchKey);
+  },
+  decoration: const InputDecoration(
+    hintText: 'ابحث عن اسم...',
+    prefixIcon: Icon(Icons.search),
+    border: OutlineInputBorder(),
+  ),
 )
 ```
 
-### ArabicNumberField
-
-Numeric field that converts digit scripts on every keystroke.
+**مثال بحث متساهل (يقبل فاطمة وفاطمه):**
 
 ```dart
+import 'package:arabic_text/arabic_text.dart';
+
+void _onSearchChanged(String raw) {
+  final queryKey = ArabicText.toLooseSearchKey(raw);
+  setState(() {
+    _results = raw.isEmpty
+        ? _allItems
+        : _allItems.where((item) =>
+            ArabicText.toLooseSearchKey(item).contains(queryKey)).toList();
+  });
+}
+```
+
+---
+
+### `ArabicNumberField`
+
+حقل أرقام يُحوّل أشكال الأرقام تلقائياً عند كل ضغطة.
+
+```dart
+// يُحوّل الأرقام العربية/الفارسية إلى غربية (0-9)
 ArabicNumberField(
-  digitDirection: ArabicDigitDirection.eastern,  // 123 → ١٢٣
-  onNormalizedChanged: (v) => parse(v),          // always delivers western digits
+  controller: _phoneController,
+  digitDirection: ArabicDigitDirection.western,
+  decoration: const InputDecoration(
+    labelText: 'رقم الهاتف',
+    border: OutlineInputBorder(),
+  ),
+  onNormalizedChanged: (westernDigits) {
+    // westernDigits دائماً بالأرقام الغربية 0-9
+    // آمن للتحويل إلى int/double مباشرة
+    final number = int.tryParse(westernDigits);
+  },
+)
+
+// يُحوّل الأرقام الغربية إلى عربية شرقية (٠-٩)
+ArabicNumberField(
+  digitDirection: ArabicDigitDirection.eastern,
+  decoration: const InputDecoration(
+    labelText: 'المبلغ',
+    hintText: '١٢٣٤٥',
+  ),
+  onChanged: (displayValue) => print('المعروض: $displayValue'),       // ٠-٩
+  onNormalizedChanged: (western) => print('للحساب: $western'),         // 0-9
 )
 ```
 
 ---
 
-## Formatters
+## الـ Formatters مباشرةً
 
-Attach directly to any [TextField.inputFormatters].
-
-| Formatter | Effect |
-|-----------|--------|
-| `ArabicInputFormatter` | Removes tashkeel and tatweel (configurable) |
-| `ArabicNumberFormatter` | Converts between Eastern / Western digit scripts |
-| `ArabicSearchKeyFormatter` | Applies `ArabicText.toSearchKey` on every keystroke |
-
----
-
-## Controllers
-
-### ArabicTextEditingController
-
-Drop-in replacement for [TextEditingController] with Arabic utility getters.
+يمكن تركيبها على أي `TextFormField` أو `TextField` عادي.
 
 ```dart
-final c = ArabicTextEditingController();
+// يُزيل التشكيل والتطويل عند كل ضغطة
+TextField(
+  inputFormatters: const [ArabicInputFormatter()],
+)
 
-c.text = 'مُحَمَّد';
-print(c.searchKey);      // ArabicText.toSearchKey(text)
-print(c.looseSearchKey); // ArabicText.toLooseSearchKey(text)
-print(c.displayKey);     // ArabicText.toDisplayKey(text)
-print(c.slug);           // ArabicText.toSlug(text)
+// مع خيارات مخصصة
+TextField(
+  inputFormatters: [
+    ArabicInputFormatter(
+      options: const ArabicNormalizeOptions(
+        removeTashkeel: true,
+        normalizeAlef: true,
+        normalizeHamza: true,
+      ),
+    ),
+  ],
+)
 
-// Explicit normalization only — text is NEVER auto-mutated.
-// Getters derive values on every call; they do not modify stored text.
-c.normalizeInPlace(
-  const ArabicNormalizeOptions(removeTashkeel: true),
-);
-```
-
-> **Warning:** Getters are read-only derivations. Do not auto-mutate text.
-> Use `normalizeInPlace` explicitly, or attach an `ArabicInputFormatter` at
-> the widget layer for live normalization.
-
-### ArabicSearchController
-
-```dart
-final c = ArabicSearchController();
-c.text = 'مُحَمَّد';
-print(c.searchKey);      // normalized search key
-print(c.looseSearchKey); // loose (ta-marbouta collapsed) search key
+// تحويل الأرقام فقط
+TextField(
+  inputFormatters: [
+    const ArabicNumberFormatter(direction: ArabicDigitDirection.eastern),
+  ],
+)
 ```
 
 ---
 
-## Validators
+## الـ Controllers
 
-Static validators compatible with [TextFormField.validator].
+### `ArabicTextEditingController`
+
+يمتد `TextEditingController` بـ getters للقراءة فقط. **النص لا يتغير تلقائياً أبداً.**
 
 ```dart
-TextFormField(
-  validator: ArabicValidators.requiredArabic,
-)
+final _controller = ArabicTextEditingController();
 
-TextFormField(
-  validator: ArabicValidators.arabicOnly,
-)
+// في أي وقت:
+print(_controller.text);          // النص الأصلي
+print(_controller.searchKey);     // ArabicText.toSearchKey(text)
+print(_controller.looseSearchKey); // ArabicText.toLooseSearchKey(text)
+print(_controller.displayKey);    // ArabicText.toDisplayKey(text)
+print(_controller.slug);          // ArabicText.toSlug(text)
 
-TextFormField(
-  validator: ArabicValidators.minArabicLetters(3),
-)
+// عند الحفظ:
+void onSave() {
+  saveRecord(
+    name: _controller.text,
+    searchKey: _controller.searchKey,
+  );
+}
 
-TextFormField(
-  validator: ArabicValidators.maxArabicLetters(20),
-)
+// التطبيع اليدوي الصريح — الطريقة الوحيدة لتغيير النص:
+void onNormalize() {
+  _controller.normalizeInPlace(
+    const ArabicNormalizeOptions(removeTashkeel: true, normalizeAlef: true),
+  );
+}
+```
 
-TextFormField(
-  // accepts Western 0-9, Eastern Arabic ٠-٩, and Persian ۰-۹
-  validator: ArabicValidators.numericArabic,
+### `ArabicSearchController`
+
+للبحث فقط. يُوفّر `searchKey` و `looseSearchKey`.
+
+```dart
+final _searchController = ArabicSearchController();
+
+_searchController.addListener(() {
+  final query = _searchController.looseSearchKey;
+  _filterResults(query);
+});
+```
+
+---
+
+## الـ Validators
+
+متوافقة مع `TextFormField.validator`. تُعيد `null` عند النجاح، وتُعيد رسالة خطأ عربية عند الفشل. **لا تُغيّر قيمة الحقل أبداً.**
+
+```dart
+Form(
+  key: _formKey,
+  child: Column(
+    children: [
+      // حقل مطلوب بالعربية
+      TextFormField(
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        decoration: const InputDecoration(labelText: 'الاسم'),
+        validator: ArabicValidators.requiredArabic,
+        // رسالة الخطأ: 'هذا الحقل مطلوب'
+      ),
+
+      // حروف عربية فقط
+      TextFormField(
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        decoration: const InputDecoration(labelText: 'المدينة'),
+        validator: ArabicValidators.arabicOnly,
+        // رسالة الخطأ: 'يجب إدخال نص عربي فقط'
+      ),
+
+      // حد أدنى للأحرف العربية
+      TextFormField(
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        decoration: const InputDecoration(labelText: 'الملاحظات'),
+        validator: ArabicValidators.minArabicLetters(3),
+        // رسالة الخطأ: 'عدد الأحرف العربية أقل من المطلوب'
+      ),
+
+      // حد أقصى للأحرف العربية
+      TextFormField(
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        decoration: const InputDecoration(labelText: 'الوصف'),
+        validator: ArabicValidators.maxArabicLetters(100),
+        // رسالة الخطأ: 'عدد الأحرف العربية أكبر من المسموح'
+      ),
+
+      // رقم فقط — يقبل الغربية والعربية والفارسية
+      TextFormField(
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'العمر'),
+        validator: ArabicValidators.numericArabic,
+        // يقبل: 25 أو ٢٥ أو ۲۵
+        // رسالة الخطأ: 'يجب إدخال رقم صحيح'
+      ),
+
+      // نص مختلط — يشترط وجود عربية على الأقل
+      TextFormField(
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        decoration: const InputDecoration(labelText: 'ملاحظة'),
+        validator: ArabicValidators.mixedArabicText,
+        // رسالة الخطأ: 'يجب أن يحتوي النص على أحرف عربية'
+      ),
+
+      ElevatedButton(
+        onPressed: () => _formKey.currentState!.validate(),
+        child: const Text('تحقق'),
+      ),
+    ],
+  ),
 )
 ```
 
-> **Note:** All validators are compatible with Flutter Form / TextFormField
-> validator. They return `null` on success and an Arabic error string on
-> failure. Validators never normalize or mutate the input value.
+**ملخص الـ Validators:**
 
-| Validator | Passes when |
-|-----------|-------------|
-| `requiredArabic` | non-null, non-empty after trim |
-| `arabicOnly` | all code points are in the Arabic Unicode block |
-| `mixedArabicText` | at least one Arabic code point present |
-| `minArabicLetters(n)` | Arabic letter count ≥ n |
-| `maxArabicLetters(n)` | Arabic letter count ≤ n |
-| `numericArabic` | parses as a number; accepts Western (0–9), Eastern Arabic (٠–٩), and Persian (۰–۹) digits |
+| الـ Validator | شرط القبول | رسالة الخطأ |
+|---|---|---|
+| `requiredArabic` | غير فارغ بعد الـ trim | هذا الحقل مطلوب |
+| `arabicOnly` | جميع الأحرف عربية | يجب إدخال نص عربي فقط |
+| `mixedArabicText` | يحتوي على عربية على الأقل | يجب أن يحتوي النص على أحرف عربية |
+| `minArabicLetters(n)` | عدد الأحرف العربية ≥ n | عدد الأحرف العربية أقل من المطلوب |
+| `maxArabicLetters(n)` | عدد الأحرف العربية ≤ n | عدد الأحرف العربية أكبر من المسموح |
+| `numericArabic` | رقم صحيح (0-9 أو ٠-٩ أو ۰-۹) | يجب إدخال رقم صحيح |
+
+---
+
+## الترخيص
+
+MIT — [Devsamhan](https://github.com/devsamhan)
