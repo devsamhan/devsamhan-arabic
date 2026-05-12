@@ -6,11 +6,11 @@
 
 ## المكتبات
 
-| المكتبة | الوصف | pub.dev |
-|---|---|---|
-| [`arabic_text`](packages/arabic_text/dart/) | تطبيع النص العربي — بحث، فرز، أسماء، slug | [![pub.dev](https://img.shields.io/pub/v/arabic_text.svg)](https://pub.dev/packages/arabic_text) |
-| [`arabic_bidi`](packages/arabic_bidi/dart/) | عرض العربية في الطرفية — ربط الحروف، logger، كشف الاتجاه | [![pub.dev](https://img.shields.io/pub/v/arabic_bidi.svg)](https://pub.dev/packages/arabic_bidi) |
-| [`flutter_arabic_ui`](packages/flutter_arabic_ui/) | مكوّنات Flutter العربية — حقول، formatters، controllers، validators | [![pub.dev](https://img.shields.io/pub/v/flutter_arabic_ui.svg)](https://pub.dev/packages/flutter_arabic_ui) |
+| المكتبة | الوصف | البيئة الحالية | قادماً | pub.dev |
+|---|---|---|---|---|
+| [`arabic_text`](packages/arabic_text/dart/) | توحيد النص العربي وفهرسته | Dart + Flutter | TypeScript · Python | [![pub.dev](https://img.shields.io/pub/v/arabic_text.svg)](https://pub.dev/packages/arabic_text) |
+| [`arabic_bidi`](packages/arabic_bidi/dart/) | عرض العربية صحيحاً في الطرفية | CLI / سكريبت | TypeScript · Python | [![pub.dev](https://img.shields.io/pub/v/arabic_bidi.svg)](https://pub.dev/packages/arabic_bidi) |
+| [`flutter_arabic_ui`](packages/flutter_arabic_ui/) | حقول إدخال وتحقق للاستخدام | Flutter فقط | — | [![pub.dev](https://img.shields.io/pub/v/flutter_arabic_ui.svg)](https://pub.dev/packages/flutter_arabic_ui) |
 
 ---
 
