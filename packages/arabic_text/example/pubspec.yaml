@@ -1,0 +1,10 @@
+name: arabic_text_example
+description: Local integration test for arabic_text package.
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  arabic_text:
+    path: ../dart

@@ -1,0 +1,23 @@
+name: arabic_libraries_test_app
+description: Integration test app for arabic_text, arabic_bidi, and flutter_arabic_ui.
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  arabic_text:
+    path: ../packages/arabic_text/dart
+  arabic_bidi:
+    path: ../packages/arabic_bidi/dart
+  flutter_arabic_ui:
+    path: ../packages/flutter_arabic_ui
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0

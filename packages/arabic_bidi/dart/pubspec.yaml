@@ -1,0 +1,20 @@
+name: arabic_bidi
+description: >-
+  Arabic terminal display helpers — reshape, direction detection,
+  and best-effort terminal preparation for CLI environments.
+  Not a full Unicode Bidi Algorithm implementation.
+version: 1.0.0
+
+homepage: https://github.com/devsamhan/devsamhan-arabic
+repository: https://github.com/devsamhan/devsamhan-arabic
+issue_tracker: https://github.com/devsamhan/devsamhan-arabic/issues
+topics: [arabic, terminal, cli, rtl, bidi]
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  arabic_text: ^1.0.0
+
+dev_dependencies:
+  test: ^1.25.0

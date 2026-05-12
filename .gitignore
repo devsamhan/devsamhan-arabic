@@ -1,0 +1,21 @@
+# Claude Code internal
+.claude/
+claude/
+
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+*.g.dart
+*.freezed.dart
+doc/api/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,29 @@
+name: flutter_arabic_ui
+description: >-
+  Arabic-first Flutter widgets — RTL text fields, search,
+  number input, formatters, controllers, and validators.
+version: 1.0.0
+
+homepage: https://github.com/devsamhan/devsamhan-arabic
+repository: https://github.com/devsamhan/devsamhan-arabic
+issue_tracker: https://github.com/devsamhan/devsamhan-arabic/issues
+
+topics:
+  - arabic
+  - flutter
+  - rtl
+  - widgets
+  - forms
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  arabic_text: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
