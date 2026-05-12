@@ -1,0 +1,198 @@
+{
+  "meta": {
+    "spec_version": 1,
+    "description": "toSearchKey preset — the primary normalization for database indexing and full-text search",
+    "notes": "toSearchKey applies: presentationForms + tatweel + tashkeel + alef + hamza + ya normalization + whitespace collapse. It does NOT apply: ta marbouta conversion, digit conversion, punctuation removal."
+  },
+  "cases": [
+    {
+      "id": "sk-name-001",
+      "name": "Fully voweled Arabic name",
+      "operation": "toSearchKey",
+      "input": "مُحَمَّدٌ",
+      "expected": "محمد"
+    },
+    {
+      "id": "sk-name-002",
+      "name": "Name with hamza-below alef",
+      "operation": "toSearchKey",
+      "input": "إبراهيم",
+      "expected": "ابراهيم"
+    },
+    {
+      "id": "sk-name-003",
+      "name": "Name with alef madda",
+      "operation": "toSearchKey",
+      "input": "آدم",
+      "expected": "ادم"
+    },
+    {
+      "id": "sk-name-004",
+      "name": "Name with alef maqsoura — normalized to ya",
+      "operation": "toSearchKey",
+      "input": "موسى",
+      "expected": "موسي",
+      "notes": "ى → ي in search key. Both 'موسى' and 'موسي' map to same key."
+    },
+    {
+      "id": "sk-name-005",
+      "name": "Female name with ta marbouta — preserved in search key",
+      "operation": "toSearchKey",
+      "input": "فَاطِمَةُ",
+      "expected": "فاطمة",
+      "notes": "ة is NOT converted to ه in toSearchKey. This is intentional and matches SPEC."
+    },
+    {
+      "id": "sk-name-006",
+      "name": "Name with tatweel stretching",
+      "operation": "toSearchKey",
+      "input": "مـحـمـد",
+      "expected": "محمد"
+    },
+    {
+      "id": "sk-name-007",
+      "name": "Name with both tashkeel and tatweel",
+      "operation": "toSearchKey",
+      "input": "عَـبْـدُ الـرَّحْمَـنِ",
+      "expected": "عبد الرحمن"
+    },
+    {
+      "id": "sk-city-001",
+      "name": "City name with hamza variants",
+      "operation": "toSearchKey",
+      "input": "أَبُو ظَبْيٍ",
+      "expected": "ابو ظبي"
+    },
+    {
+      "id": "sk-city-002",
+      "name": "City name — Riyadh",
+      "operation": "toSearchKey",
+      "input": "الرِّياض",
+      "expected": "الرياض"
+    },
+    {
+      "id": "sk-city-003",
+      "name": "City with ta marbouta — preserved",
+      "operation": "toSearchKey",
+      "input": "مَكَّةُ المُكَرَّمَة",
+      "expected": "مكة المكرمة",
+      "notes": "Both ة are preserved — search for 'مكه' will NOT match unless caller normalizes query the same way"
+    },
+    {
+      "id": "sk-whitespace-001",
+      "name": "Collapse multiple internal spaces",
+      "operation": "toSearchKey",
+      "input": "مُحَمَّدٌ   رَسُولُ",
+      "expected": "محمد رسول"
+    },
+    {
+      "id": "sk-whitespace-002",
+      "name": "Trim leading and trailing whitespace",
+      "operation": "toSearchKey",
+      "input": "  محمد  ",
+      "expected": "محمد"
+    },
+    {
+      "id": "sk-whitespace-003",
+      "name": "Tabs and newlines collapsed to single space",
+      "operation": "toSearchKey",
+      "input": "محمد\t\nعلي",
+      "expected": "محمد علي"
+    },
+    {
+      "id": "sk-mixed-001",
+      "name": "Arabic with embedded Latin — Latin preserved",
+      "operation": "toSearchKey",
+      "input": "Invoice فاتورة",
+      "expected": "Invoice فاتورة"
+    },
+    {
+      "id": "sk-mixed-002",
+      "name": "Arabic with number — number preserved",
+      "operation": "toSearchKey",
+      "input": "طلب رقم 123",
+      "expected": "طلب رقم 123"
+    },
+    {
+      "id": "sk-mixed-003",
+      "name": "Eastern Arabic digits preserved in search key",
+      "operation": "toSearchKey",
+      "input": "السعر ١٢٥ ريال",
+      "expected": "السعر ١٢٥ ريال",
+      "notes": "normalizeDigits is NOT part of toSearchKey. Callers who want digit normalization must call it separately."
+    },
+    {
+      "id": "sk-hamza-001",
+      "name": "Hamza-on-waw normalized",
+      "operation": "toSearchKey",
+      "input": "مسؤول",
+      "expected": "مسءول"
+    },
+    {
+      "id": "sk-hamza-002",
+      "name": "Hamza-on-ya normalized",
+      "operation": "toSearchKey",
+      "input": "شيئ",
+      "expected": "شيء"
+    },
+    {
+      "id": "sk-presentation-001",
+      "name": "Legacy presentation forms normalized before search",
+      "operation": "toSearchKey",
+      "input": "ﻣﺮﺣﺒﺎ",
+      "expected": "مرحبا"
+    },
+    {
+      "id": "sk-empty-001",
+      "name": "Empty string returns empty string",
+      "operation": "toSearchKey",
+      "input": "",
+      "expected": ""
+    },
+    {
+      "id": "sk-latin-only-001",
+      "name": "Latin-only string passes through whitespace-collapsed",
+      "operation": "toSearchKey",
+      "input": "Hello   World",
+      "expected": "Hello World"
+    },
+    {
+      "id": "sk-persian-ya-001",
+      "name": "Persian Yeh normalized in search key",
+      "operation": "toSearchKey",
+      "input": "علی",
+      "expected": "علي",
+      "notes": "ی (U+06CC) → ي (U+064A). Encoding normalization applied in toSearchKey."
+    },
+    {
+      "id": "sk-persian-ya-002",
+      "name": "Mixed Persian and Alef Maqsoura both normalized",
+      "operation": "toSearchKey",
+      "input": "مهدی موسى",
+      "expected": "مهدي موسي"
+    },
+    {
+      "id": "sk-loose-001",
+      "name": "toLooseSearchKey normalizes ta marbouta",
+      "operation": "toLooseSearchKey",
+      "input": "فَاطِمَةُ",
+      "expected": "فاطمه",
+      "notes": "Explicit loose search: ta marbouta converted. Use only for query normalization, not storage."
+    },
+    {
+      "id": "sk-loose-002",
+      "name": "toLooseSearchKey — city name",
+      "operation": "toLooseSearchKey",
+      "input": "مَكَّةُ المُكَرَّمَة",
+      "expected": "مكه المكرمه"
+    },
+    {
+      "id": "sk-loose-003",
+      "name": "toSearchKey preserves ta marbouta (contrast case)",
+      "operation": "toSearchKey",
+      "input": "مَكَّةُ المُكَرَّمَة",
+      "expected": "مكة المكرمة",
+      "notes": "Confirms default toSearchKey does NOT convert ة. Compare with sk-loose-002."
+    }
+  ]
+}

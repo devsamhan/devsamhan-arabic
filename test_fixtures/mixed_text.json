@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "spec_version": 1,
+    "description": "Mixed Arabic/Latin text and preset functions — normalizeName, toSlug, toDisplayKey, isArabic, arabicRatio",
+    "notes": "Tests preset functions not fully covered by search_key.json or sorting.json. Supplements but does not duplicate existing fixtures."
+  },
+  "cases": [
+    {
+      "id": "name-001",
+      "name": "normalizeName: fully voweled name",
+      "operation": "normalizeName",
+      "input": "مُحَمَّد",
+      "expected": "محمد"
+    },
+    {
+      "id": "name-002",
+      "name": "normalizeName: female name preserves ta marbouta",
+      "operation": "normalizeName",
+      "input": "فَاطِمَةُ",
+      "expected": "فاطمة",
+      "notes": "normalizeName does NOT convert ة → ه. Compare with toLooseSearchKey which does."
+    },
+    {
+      "id": "name-003",
+      "name": "normalizeName: alef maqsoura (ى) is preserved",
+      "operation": "normalizeName",
+      "input": "موسى",
+      "expected": "موسى",
+      "notes": "ى (U+0649) is linguistically meaningful in names — normalizeName does NOT convert it to ي"
+    },
+    {
+      "id": "name-004",
+      "name": "normalizeName: Persian Yeh (ی) is normalized to Arabic Yeh",
+      "operation": "normalizeName",
+      "input": "مهدی",
+      "expected": "مهدي",
+      "notes": "ی (U+06CC) → ي. Persian Yeh is an encoding artifact, unlike ى which is linguistically distinct."
+    },
+    {
+      "id": "name-005",
+      "name": "normalizeName: removes tatweel",
+      "operation": "normalizeName",
+      "input": "مـحـمـد",
+      "expected": "محمد"
+    },
+    {
+      "id": "name-006",
+      "name": "normalizeName: normalizes hamza-above alef",
+      "operation": "normalizeName",
+      "input": "أحمد",
+      "expected": "احمد"
+    },
+    {
+      "id": "name-007",
+      "name": "normalizeName: alef maqsoura mid-word preserved",
+      "operation": "normalizeName",
+      "input": "يحيى",
+      "expected": "يحيى",
+      "notes": "Both ى occurrences preserved — normalizeName does not normalize alef maqsoura"
+    },
+    {
+      "id": "slug-001",
+      "name": "toSlug: city name with ta marbouta converted",
+      "operation": "toSlug",
+      "input": "مدينة الرياض",
+      "expected": "مدينه-الرياض"
+    },
+    {
+      "id": "slug-002",
+      "name": "toSlug: name with tashkeel",
+      "operation": "toSlug",
+      "input": "مُحَمَّد الأحمد",
+      "expected": "محمد-الاحمد"
+    },
+    {
+      "id": "slug-003",
+      "name": "toSlug: single word with ta marbouta",
+      "operation": "toSlug",
+      "input": "مدرسة",
+      "expected": "مدرسه"
+    },
+    {
+      "id": "slug-004",
+      "name": "toSlug: mixed Arabic and Latin — Latin lowercased",
+      "operation": "toSlug",
+      "input": "تطبيق App",
+      "expected": "تطبيق-app"
+    },
+    {
+      "id": "display-001",
+      "name": "toDisplayKey: removes tatweel, preserves tashkeel",
+      "operation": "toDisplayKey",
+      "input": "مـُحَمَّد",
+      "expected": "مُحَمَّد",
+      "notes": "removeTatweel only — tashkeel preserved unlike toSearchKey"
+    },
+    {
+      "id": "display-002",
+      "name": "toDisplayKey: stretched name with embedded Latin",
+      "operation": "toDisplayKey",
+      "input": "مـحـمـد @email.com",
+      "expected": "محمد @email.com"
+    },
+    {
+      "id": "display-003",
+      "name": "toDisplayKey: preserves hamza and alef variants",
+      "operation": "toDisplayKey",
+      "input": "أَحْمَد",
+      "expected": "أَحْمَد",
+      "notes": "toDisplayKey does NOT normalize alef or remove tashkeel — only removes tatweel"
+    },
+    {
+      "id": "arabic-001",
+      "name": "isArabic: pure Arabic text returns true",
+      "operation": "isArabic",
+      "input": "السلام عليكم",
+      "expected": true
+    },
+    {
+      "id": "arabic-002",
+      "name": "isArabic: Latin-only text returns false",
+      "operation": "isArabic",
+      "input": "Hello World",
+      "expected": false
+    },
+    {
+      "id": "arabic-003",
+      "name": "isArabic: mixed text with Arabic returns true",
+      "operation": "isArabic",
+      "input": "Hello مرحبا",
+      "expected": true
+    },
+    {
+      "id": "arabic-004",
+      "name": "isArabic: empty string returns false",
+      "operation": "isArabic",
+      "input": "",
+      "expected": false
+    },
+    {
+      "id": "ratio-001",
+      "name": "arabicRatio: pure Arabic name returns 1.0",
+      "operation": "arabicRatio",
+      "input": "محمد",
+      "expected": 1.0
+    },
+    {
+      "id": "ratio-002",
+      "name": "arabicRatio: empty string returns 0.0",
+      "operation": "arabicRatio",
+      "input": "",
+      "expected": 0.0
+    },
+    {
+      "id": "ratio-003",
+      "name": "arabicRatio: Latin-only returns 0.0",
+      "operation": "arabicRatio",
+      "input": "Hello",
+      "expected": 0.0
+    }
+  ]
+}

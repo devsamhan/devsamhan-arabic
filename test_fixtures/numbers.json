@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "spec_version": 1,
+    "description": "Digit normalization — normalizeDigits function",
+    "notes": "Tests digit script conversion between Western (0-9), Eastern Arabic (٠-٩ U+0660-U+0669), and Persian (۰-۹ U+06F0-U+06F9). Complements the digits-* cases in normalize.json with in-sentence and full-set cases."
+  },
+  "cases": [
+    {
+      "id": "num-001",
+      "name": "Full Eastern Arabic digit set to Western",
+      "operation": "normalizeDigits",
+      "input": "٠١٢٣٤٥٦٧٨٩",
+      "options": { "to": "western" },
+      "expected": "0123456789"
+    },
+    {
+      "id": "num-002",
+      "name": "Full Western digit set to Eastern Arabic",
+      "operation": "normalizeDigits",
+      "input": "0123456789",
+      "options": { "to": "eastern" },
+      "expected": "٠١٢٣٤٥٦٧٨٩"
+    },
+    {
+      "id": "num-003",
+      "name": "Full Persian digit set to Western",
+      "operation": "normalizeDigits",
+      "input": "۰۱۲۳۴۵۶۷۸۹",
+      "options": { "to": "western" },
+      "expected": "0123456789"
+    },
+    {
+      "id": "num-004",
+      "name": "Eastern Arabic digits in Arabic sentence to Western",
+      "operation": "normalizeDigits",
+      "input": "السعر ١٢٥ ريال",
+      "options": { "to": "western" },
+      "expected": "السعر 125 ريال"
+    },
+    {
+      "id": "num-005",
+      "name": "Western digits in Arabic sentence to Eastern",
+      "operation": "normalizeDigits",
+      "input": "المبلغ 100 دينار",
+      "options": { "to": "eastern" },
+      "expected": "المبلغ ١٠٠ دينار"
+    },
+    {
+      "id": "num-006",
+      "name": "Mixed Eastern and Western digits to Western",
+      "operation": "normalizeDigits",
+      "input": "١23٤5",
+      "options": { "to": "western" },
+      "expected": "12345"
+    },
+    {
+      "id": "num-007",
+      "name": "Arabic text without digits is unchanged",
+      "operation": "normalizeDigits",
+      "input": "مرحبا",
+      "options": { "to": "western" },
+      "expected": "مرحبا"
+    },
+    {
+      "id": "num-008",
+      "name": "Decimal number with Eastern Arabic digits to Western",
+      "operation": "normalizeDigits",
+      "input": "١٢٣.٤٥",
+      "options": { "to": "western" },
+      "expected": "123.45",
+      "notes": "Non-digit chars (.) pass through unchanged"
+    },
+    {
+      "id": "num-009",
+      "name": "Zero digit: Eastern Arabic ٠ to Western",
+      "operation": "normalizeDigits",
+      "input": "٠",
+      "options": { "to": "western" },
+      "expected": "0"
+    },
+    {
+      "id": "num-010",
+      "name": "Zero digit: Western 0 to Eastern Arabic",
+      "operation": "normalizeDigits",
+      "input": "0",
+      "options": { "to": "eastern" },
+      "expected": "٠"
+    }
+  ]
+}

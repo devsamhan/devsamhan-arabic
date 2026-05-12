@@ -1,0 +1,312 @@
+{
+  "meta": {
+    "spec_version": 1,
+    "description": "Surgical normalization functions — one transformation per case",
+    "notes": "These cases test individual atomic functions. Each function does exactly one thing. Order of execution matters only in combined operations (see SPEC.md §Processing Order)."
+  },
+  "cases": [
+    {
+      "id": "tashkeel-001",
+      "name": "Remove fatha, damma, kasra from common name",
+      "operation": "removeTashkeel",
+      "input": "مُحَمَّدٌ",
+      "expected": "محمد"
+    },
+    {
+      "id": "tashkeel-002",
+      "name": "Remove tashkeel from verb with shadda and sukun",
+      "operation": "removeTashkeel",
+      "input": "فِعْلَانِ",
+      "expected": "فعلان"
+    },
+    {
+      "id": "tashkeel-003",
+      "name": "Remove tashkeel from definite article with full voweling",
+      "operation": "removeTashkeel",
+      "input": "الْحَمْدُ لِلَّهِ",
+      "expected": "الحمد لله"
+    },
+    {
+      "id": "tashkeel-004",
+      "name": "Text with no tashkeel is unchanged",
+      "operation": "removeTashkeel",
+      "input": "محمد",
+      "expected": "محمد"
+    },
+    {
+      "id": "tashkeel-005",
+      "name": "Remove tanwin forms",
+      "operation": "removeTashkeel",
+      "input": "كِتَابٌ جَدِيدٌ",
+      "expected": "كتاب جديد"
+    },
+    {
+      "id": "tashkeel-006",
+      "name": "Latin text passes through unchanged",
+      "operation": "removeTashkeel",
+      "input": "Hello مُحَمَّد",
+      "expected": "Hello محمد"
+    },
+
+    {
+      "id": "tatweel-001",
+      "name": "Remove tatweel from stretched name",
+      "operation": "removeTatweel",
+      "input": "مـحـمـد",
+      "expected": "محمد"
+    },
+    {
+      "id": "tatweel-002",
+      "name": "Remove multiple consecutive tatweel characters",
+      "operation": "removeTatweel",
+      "input": "جميـــــل",
+      "expected": "جميل"
+    },
+    {
+      "id": "tatweel-003",
+      "name": "Text with no tatweel is unchanged",
+      "operation": "removeTatweel",
+      "input": "مرحبا",
+      "expected": "مرحبا"
+    },
+    {
+      "id": "tatweel-004",
+      "name": "Tatweel at word boundaries",
+      "operation": "removeTatweel",
+      "input": "الـرَّحْمَـٰنِ",
+      "expected": "الرَّحْمَـٰنِ",
+      "notes": "U+0640 removed, U+0670 (Alef Superscript) is tashkeel not tatweel — removeTatweel does not remove it"
+    },
+
+    {
+      "id": "alef-001",
+      "name": "Normalize hamza-above alef (أ)",
+      "operation": "normalizeAlef",
+      "input": "أحمد",
+      "expected": "احمد"
+    },
+    {
+      "id": "alef-002",
+      "name": "Normalize hamza-below alef (إ)",
+      "operation": "normalizeAlef",
+      "input": "إسلام",
+      "expected": "اسلام"
+    },
+    {
+      "id": "alef-003",
+      "name": "Normalize alef with madda (آ)",
+      "operation": "normalizeAlef",
+      "input": "آية",
+      "expected": "اية"
+    },
+    {
+      "id": "alef-004",
+      "name": "Normalize alef wasla AND alef with madda in same word",
+      "operation": "normalizeAlef",
+      "input": "ٱلْقُرْآنُ",
+      "expected": "الْقُرْانُ",
+      "notes": "Two alef variants in one word: ٱ (U+0671 alef wasla) at start → ا, and آ (U+0622 alef with madda) mid-word → ا. Both normalized in a single pass. Previous fixture had آ preserved in expected — that was a typo inconsistent with alef-003 and alef-005."
+    },
+    {
+      "id": "alef-005",
+      "name": "Multiple alef variants in one string",
+      "operation": "normalizeAlef",
+      "input": "أبو إبراهيم آدم",
+      "expected": "ابو ابراهيم ادم"
+    },
+    {
+      "id": "alef-006",
+      "name": "Bare alef is unchanged",
+      "operation": "normalizeAlef",
+      "input": "ابراهيم",
+      "expected": "ابراهيم"
+    },
+
+    {
+      "id": "hamza-001",
+      "name": "Normalize hamza-on-waw (ؤ) to bare hamza",
+      "operation": "normalizeHamza",
+      "input": "مسؤول",
+      "expected": "مسءول"
+    },
+    {
+      "id": "hamza-002",
+      "name": "Normalize hamza-on-ya (ئ) to bare hamza",
+      "operation": "normalizeHamza",
+      "input": "شيئ",
+      "expected": "شيء"
+    },
+    {
+      "id": "hamza-003",
+      "name": "Bare hamza (ء) is unchanged",
+      "operation": "normalizeHamza",
+      "input": "سماء",
+      "expected": "سماء"
+    },
+    {
+      "id": "hamza-004",
+      "name": "Hamza at word start (أ إ) is NOT affected by normalizeHamza",
+      "operation": "normalizeHamza",
+      "input": "أسماء",
+      "expected": "أسماء",
+      "notes": "normalizeHamza only handles ؤ and ئ — alef hamza forms are handled by normalizeAlef"
+    },
+
+    {
+      "id": "ya-001",
+      "name": "Normalize alef maqsoura (ى) to ya (ي)",
+      "operation": "normalizeYa",
+      "input": "موسى",
+      "expected": "موسي"
+    },
+    {
+      "id": "ya-002",
+      "name": "Normalize alef maqsoura in the middle of a word",
+      "operation": "normalizeYa",
+      "input": "يحيى",
+      "expected": "يحيي"
+    },
+    {
+      "id": "ya-003",
+      "name": "Regular ya (ي) is unchanged",
+      "operation": "normalizeYa",
+      "input": "علي",
+      "expected": "علي"
+    },
+    {
+      "id": "ya-004",
+      "name": "Multiple alef maqsoura occurrences",
+      "operation": "normalizeYa",
+      "input": "ليلى وسلمى",
+      "expected": "ليلي وسلمي"
+    },
+
+    {
+      "id": "tamarbouta-001",
+      "name": "Convert ta marbouta to ha — explicit call",
+      "operation": "normalizeTaMarbouta",
+      "input": "مدرسة",
+      "expected": "مدرسه",
+      "notes": "This function MUST be called explicitly. It is never applied automatically."
+    },
+    {
+      "id": "tamarbouta-002",
+      "name": "Convert ta marbouta in a city name",
+      "operation": "normalizeTaMarbouta",
+      "input": "مكة المكرمة",
+      "expected": "مكه المكرمه"
+    },
+    {
+      "id": "tamarbouta-003",
+      "name": "Ha (ه) at end of word is NOT affected",
+      "operation": "normalizeTaMarbouta",
+      "input": "فواكه",
+      "expected": "فواكه",
+      "notes": "ه (U+0647) is already ha — no change needed"
+    },
+    {
+      "id": "tamarbouta-004",
+      "name": "Ta marbouta in the middle of a compound is converted",
+      "operation": "normalizeTaMarbouta",
+      "input": "مدرسة الأمل",
+      "expected": "مدرسه الأمل"
+    },
+
+    {
+      "id": "presentation-001",
+      "name": "Arabic Presentation Forms-B to canonical",
+      "operation": "normalizePresentationForms",
+      "input": "ﻣﺮﺣﺒﺎ",
+      "expected": "مرحبا",
+      "notes": "FE70-FEFF block — common in legacy Windows Arabic text"
+    },
+    {
+      "id": "presentation-002",
+      "name": "Arabic Presentation Forms-A to canonical",
+      "operation": "normalizePresentationForms",
+      "input": "ﷲ",
+      "expected": "الله",
+      "notes": "FB8E and similar ligature forms"
+    },
+    {
+      "id": "presentation-003",
+      "name": "Canonical Arabic is unchanged",
+      "operation": "normalizePresentationForms",
+      "input": "مرحبا",
+      "expected": "مرحبا"
+    },
+
+    {
+      "id": "digits-001",
+      "name": "Eastern Arabic digits to Western",
+      "operation": "normalizeDigits",
+      "input": "١٢٣٤٥",
+      "options": { "to": "western" },
+      "expected": "12345"
+    },
+    {
+      "id": "digits-002",
+      "name": "Western digits to Eastern Arabic",
+      "operation": "normalizeDigits",
+      "input": "12345",
+      "options": { "to": "eastern" },
+      "expected": "١٢٣٤٥"
+    },
+    {
+      "id": "digits-003",
+      "name": "Persian extended digits to Western",
+      "operation": "normalizeDigits",
+      "input": "۱۲۳",
+      "options": { "to": "western" },
+      "expected": "123"
+    },
+    {
+      "id": "digits-004",
+      "name": "Mixed digits normalized to Western",
+      "operation": "normalizeDigits",
+      "input": "١23٤5",
+      "options": { "to": "western" },
+      "expected": "12345"
+    },
+    {
+      "id": "digits-005",
+      "name": "Zero in Eastern Arabic",
+      "operation": "normalizeDigits",
+      "input": "٠",
+      "options": { "to": "western" },
+      "expected": "0"
+    },
+
+    {
+      "id": "ya-persian-001",
+      "name": "Persian/Urdu Yeh (ی U+06CC) normalized to Arabic Yeh (ي)",
+      "operation": "normalizeYa",
+      "input": "علی",
+      "expected": "علي",
+      "notes": "Persian Yeh commonly appears in Arabic text from Persian-layout keyboards. Treated as encoding artifact."
+    },
+    {
+      "id": "ya-persian-002",
+      "name": "Persian Yeh in a full name",
+      "operation": "normalizeYa",
+      "input": "مهدی احمدی",
+      "expected": "مهدي احمدي"
+    },
+    {
+      "id": "ya-persian-003",
+      "name": "Mixed Persian Yeh and Alef Maqsoura",
+      "operation": "normalizeYa",
+      "input": "علی موسى",
+      "expected": "علي موسي",
+      "notes": "Both ی (U+06CC) and ى (U+0649) normalize to ي (U+064A)"
+    },
+    {
+      "id": "ya-persian-004",
+      "name": "Arabic Yeh (ي U+064A) is unchanged",
+      "operation": "normalizeYa",
+      "input": "علي",
+      "expected": "علي",
+      "notes": "Already correct Arabic Yeh — idempotent"
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "spec_version": 1,
+    "description": "Arabic sorting — sort key generation for consistent ordering across implementations",
+    "notes": "This library provides sort keys, not a full Unicode Collation Algorithm. Sort keys are derived via toSearchKey, with additional rules for letter-order consistency. The goal is: words that 'mean the same' sort together, regardless of hamza/alef/tashkeel variants."
+  },
+  "cases": [
+    {
+      "id": "sort-key-001",
+      "name": "Sort key for voweled name",
+      "operation": "toSortKey",
+      "input": "مُحَمَّد",
+      "expected": "محمد"
+    },
+    {
+      "id": "sort-key-002",
+      "name": "Sort key for name with hamza-above alef",
+      "operation": "toSortKey",
+      "input": "أحمد",
+      "expected": "احمد"
+    },
+    {
+      "id": "sort-key-003",
+      "name": "Sort key for name with alef maqsoura",
+      "operation": "toSortKey",
+      "input": "موسى",
+      "expected": "موسي"
+    },
+    {
+      "id": "sort-key-004",
+      "name": "Sort key for ta marbouta name — ة sorts as ة for sort purposes",
+      "operation": "toSortKey",
+      "input": "فاطمة",
+      "expected": "فاطمة",
+      "notes": "In sort key, ة is preserved. We do NOT convert ة→ه for sort. فاطمة and فاطمه would be different sort keys — this is intentional. Applications that need them to group must call normalizeTaMarbouta explicitly."
+    },
+    {
+      "id": "sort-equiv-001",
+      "name": "Equivalence: أحمد and احمد should produce same sort key",
+      "operation": "toSortKey",
+      "input": "أحمد",
+      "expected": "احمد",
+      "notes": "Both أحمد (with hamza) and احمد (bare alef) should sort identically"
+    },
+    {
+      "id": "sort-equiv-002",
+      "name": "Equivalence: مُحَمَّد and محمد should produce same sort key",
+      "operation": "toSortKey",
+      "input": "مُحَمَّد",
+      "expected": "محمد"
+    },
+    {
+      "id": "sort-list-001",
+      "name": "Sort a list of Arabic names — returns original strings in sorted order",
+      "operation": "sort",
+      "input": ["يوسف", "أحمد", "إبراهيم", "محمد", "آدم"],
+      "expected": ["إبراهيم", "أحمد", "آدم", "محمد", "يوسف"],
+      "notes": "v1 sort is stable lexical ordering over toSortKey output. Sort keys at discriminating position: ابراهيم(ب=U+0628) < احمد(ح=U+062D) < ادم(د=U+062F). This is NOT full Arabic dictionary collation (which requires locale-aware collation rules). Full collation may be added as ArabicCollator in v2."
+    },
+    {
+      "id": "sort-keys-001",
+      "name": "toSortKey for each name in the list — returns normalized keys",
+      "operation": "toSortKey",
+      "input": ["يوسف", "أحمد", "إبراهيم", "محمد", "آدم"],
+      "expected": ["يوسف", "احمد", "ابراهيم", "محمد", "ادم"],
+      "notes": "toSortKey() applies to each element independently. Returns normalized keys, not original strings."
+    },
+    {
+      "id": "sort-list-002",
+      "name": "Sort names with alef maqsoura variants together",
+      "operation": "sort",
+      "input": ["موسي", "موسى"],
+      "expected": ["موسي", "موسى"],
+      "notes": "Both map to same sort key 'موسي' — original order preserved for equal keys (stable sort)"
+    },
+    {
+      "id": "sort-list-003",
+      "name": "Sort list of Arabic cities — returns original strings",
+      "operation": "sort",
+      "input": ["الرياض", "أبوظبي", "الإسكندرية", "بغداد", "القاهرة"],
+      "expected": ["أبوظبي", "الإسكندرية", "الرياض", "القاهرة", "بغداد"],
+      "notes": "v1 sort is stable lexical ordering over toSortKey output. Sort keys at discriminating position: الاسكندرية(ا=U+0627) < الرياض(ر=U+0631) < القاهرة(ق=U+0642). The 'ال' prefix is kept — no definite article stripping. This is NOT full Arabic dictionary collation (which requires locale-aware collation rules). Full collation may be added as ArabicCollator in v2."
+    },
+    {
+      "id": "sort-compare-001",
+      "name": "compare: أحمد vs احمد — equal (0)",
+      "operation": "compare",
+      "input": ["أحمد", "احمد"],
+      "expected": 0,
+      "notes": "compare(a, b) returns -1, 0, or 1 like a standard comparator"
+    },
+    {
+      "id": "sort-compare-002",
+      "name": "compare: ابراهيم before محمد (-1)",
+      "operation": "compare",
+      "input": ["ابراهيم", "محمد"],
+      "expected": -1
+    },
+    {
+      "id": "sort-compare-003",
+      "name": "compare: يوسف after محمد (1)",
+      "operation": "compare",
+      "input": ["يوسف", "محمد"],
+      "expected": 1
+    }
+  ]
+}
