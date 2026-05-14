@@ -1,54 +1,89 @@
 #!/usr/bin/env node
+import * as fs from 'fs';
 import { detectReversedInText } from './check_rtl';
 import { scanPath } from './scan';
 import { runBidi } from './bidi';
+import { filterBySeverity, buildJsonOutput, formatText } from './utils';
+import { Severity, OutputFormat } from './types';
 
-const [, , command, ...args] = process.argv;
+const [, , command, ...rawArgs] = process.argv;
+
+interface ParsedArgs {
+  path: string;
+  format: OutputFormat;
+  threshold: Severity;
+}
+
+function parseArgs(args: string[]): ParsedArgs {
+  let target = '';
+  let format: OutputFormat = 'text';
+  let threshold: Severity = 'low';
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--format' && i + 1 < args.length) {
+      const val = args[++i];
+      if (val === 'text' || val === 'json') format = val;
+    } else if (args[i] === '--severity-threshold' && i + 1 < args.length) {
+      const val = args[++i];
+      if (val === 'low' || val === 'medium' || val === 'high') threshold = val as Severity;
+    } else if (!args[i].startsWith('--')) {
+      target = args[i];
+    }
+  }
+
+  return { path: target, format, threshold };
+}
 
 function printUsage(): void {
   console.log('arabic-devtools — CLI for Arabic text development');
   console.log('');
   console.log('Commands:');
-  console.log('  check-rtl <path>   Detect potentially reversed Arabic literals');
-  console.log('  scan <path>        Scan for tatweel, tashkeel, mixed digits, and reversed RTL');
-  console.log('  bidi "<text>"      Prepare Arabic text for terminal output (BiDi)');
+  console.log('  check-rtl <path> [--format text|json] [--severity-threshold low|medium|high]');
+  console.log('  scan <path> [--format text|json] [--severity-threshold low|medium|high]');
+  console.log('  bidi "<text>"');
 }
 
 if (command === 'check-rtl') {
-  const target = args[0];
+  const { path: target, format, threshold } = parseArgs(rawArgs);
   if (!target) {
     console.error('Error: path required');
     process.exit(2);
   }
-  const fs = require('fs') as typeof import('fs');
   const content = fs.readFileSync(target, 'utf-8');
-  const findings = detectReversedInText(content);
-  if (findings.length === 0) {
-    console.log('لا توجد مشاكل.');
-    process.exit(0);
+  const all = detectReversedInText(content, target);
+  const findings = filterBySeverity(all, threshold);
+
+  if (format === 'json') {
+    console.log(JSON.stringify(buildJsonOutput('check-rtl', findings), null, 2));
+  } else {
+    if (findings.length === 0) {
+      console.log('لا توجد مشاكل.');
+    } else {
+      console.log(formatText(findings));
+    }
   }
-  for (const f of findings) {
-    console.log(`[${f.confidence.toUpperCase()}] سطر ${f.line}: "${f.word}" — ${f.reason}`);
-  }
-  process.exit(1);
+  process.exit(findings.length > 0 ? 1 : 0);
 } else if (command === 'scan') {
-  const target = args[0];
+  const { path: target, format, threshold } = parseArgs(rawArgs);
   if (!target) {
     console.error('Error: path required');
     process.exit(2);
   }
-  const issues = scanPath(target);
-  if (issues.length === 0) {
-    console.log('لا توجد مشاكل.');
-    process.exit(0);
+  const all = scanPath(target);
+  const findings = filterBySeverity(all, threshold);
+
+  if (format === 'json') {
+    console.log(JSON.stringify(buildJsonOutput('scan', findings), null, 2));
+  } else {
+    if (findings.length === 0) {
+      console.log('لا توجد مشاكل.');
+    } else {
+      console.log(formatText(findings));
+    }
   }
-  for (const issue of issues) {
-    const conf = issue.confidence ? ` [${issue.confidence.toUpperCase()}]` : '';
-    console.log(`${issue.file}:${issue.line} [${issue.type}]${conf} — ${issue.detail}`);
-  }
-  process.exit(1);
+  process.exit(findings.length > 0 ? 1 : 0);
 } else if (command === 'bidi') {
-  const text = args[0];
+  const text = rawArgs[0];
   if (text === undefined) {
     console.error('Error: text argument required');
     process.exit(2);

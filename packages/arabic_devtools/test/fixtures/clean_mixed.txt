@@ -1,0 +1,3 @@
+Hello world 123
+function greet() { return "hello"; }
+const x = 42;

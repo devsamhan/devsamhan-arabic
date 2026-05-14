@@ -1,9 +1,4 @@
-export interface RtlFinding {
-  line: number;
-  word: string;
-  confidence: 'high' | 'medium' | 'low';
-  reason: string;
-}
+import { Finding } from './types';
 
 const KNOWN_REVERSALS: Record<string, string> = {
   ثحب: 'بحث',
@@ -14,32 +9,39 @@ const KNOWN_REVERSALS: Record<string, string> = {
 };
 
 function isArabicChar(cp: number): boolean {
-  return (cp >= 0x0621 && cp <= 0x063A) || (cp >= 0x0641 && cp <= 0x064A);
+  return (cp >= 0x0621 && cp <= 0x063a) || (cp >= 0x0641 && cp <= 0x064a);
 }
 
 function isArabicWord(word: string): boolean {
-  const chars = [...word];
-  if (chars.length === 0) return false;
-  return chars.some((c) => isArabicChar(c.codePointAt(0)!));
+  return [...word].some((c) => isArabicChar(c.codePointAt(0)!));
 }
 
-export function detectReversedInText(text: string): RtlFinding[] {
-  const findings: RtlFinding[] = [];
+export function detectReversedInText(text: string, file: string): Finding[] {
+  const findings: Finding[] = [];
   const lines = text.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
     const lineNum = i + 1;
-    const words = lines[i].split(/\s+/).filter((w) => w.length > 0);
+    const wordRegex = /\S+/g;
+    let match: RegExpExecArray | null;
 
-    for (const word of words) {
+    while ((match = wordRegex.exec(lines[i])) !== null) {
+      const word = match[0];
+      const column = match.index + 1;
+
       if (!isArabicWord(word)) continue;
 
       if (KNOWN_REVERSALS[word] !== undefined) {
         findings.push({
+          code: 'AR001',
+          type: 'potentially-reversed-arabic-literal',
+          severity: 'high',
+          file,
           line: lineNum,
-          word,
-          confidence: 'high',
-          reason: `كلمة معكوسة معروفة — الصحيح: ${KNOWN_REVERSALS[word]}`,
+          column,
+          found: word,
+          suggestion: KNOWN_REVERSALS[word],
+          message: 'Potentially reversed Arabic literal',
         });
         continue;
       }
@@ -50,20 +52,28 @@ export function detectReversedInText(text: string): RtlFinding[] {
 
       if (firstCp === 0x0629) {
         findings.push({
+          code: 'AR001',
+          type: 'potentially-reversed-arabic-literal',
+          severity: 'medium',
+          file,
           line: lineNum,
-          word,
-          confidence: 'medium',
-          reason: 'الكلمة تبدأ بتاء مربوطة (ة) — قد تكون معكوسة',
+          column,
+          found: word,
+          message: 'Potentially reversed Arabic literal',
         });
         continue;
       }
 
       if (lastTwo.length === 2 && lastTwo[0] === 0x0644 && lastTwo[1] === 0x0627) {
         findings.push({
+          code: 'AR001',
+          type: 'potentially-reversed-arabic-literal',
+          severity: 'low',
+          file,
           line: lineNum,
-          word,
-          confidence: 'low',
-          reason: 'الكلمة تنتهي بـ لا — قد تكون معكوسة',
+          column,
+          found: word,
+          message: 'Potentially reversed Arabic literal',
         });
       }
     }
