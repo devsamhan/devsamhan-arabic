@@ -1,0 +1,44 @@
+{
+  "name": "@devsamhan/arabic-devtools",
+  "version": "0.1.0",
+  "description": "Arabic-aware CLI toolkit for development workflows — devsamhan-arabic",
+  "private": false,
+  "type": "commonjs",
+  "bin": {
+    "arabic-devtools": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "arabic",
+    "cli",
+    "devtools",
+    "lint",
+    "bidi",
+    "unicode"
+  ],
+  "author": "devsamhan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devsamhan/devsamhan-arabic.git"
+  },
+  "dependencies": {
+    "@devsamhan/arabic-text": "^1.0.1",
+    "@devsamhan/arabic-bidi": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
