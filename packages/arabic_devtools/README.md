@@ -1,35 +1,98 @@
 # @devsamhan/arabic-devtools
 
-CLI toolkit for Arabic-aware development workflows.
+أدوات سطر الأوامر للمطور العربي — اكتشاف مشاكل النصوص العربية في المشاريع.
 
-> **Note (v0.1.0)**: All findings are **diagnostic only**. No automatic fixes are applied.
-> The `--fix` flag does not exist in this version. Review findings manually before making changes.
+> **ملاحظة مهمة**: النسخة 0.1.0 للتشخيص فقط — لا تعديل تلقائي للملفات.
+> لا يوجد خيار `--fix` في هذه النسخة. راجع النتائج يدوياً قبل إجراء أي تغيير.
 
-## Installation
+## التثبيت
 
 ```bash
 npm install -g @devsamhan/arabic-devtools
 ```
 
-## Commands
+---
 
-### check-rtl \<path\>
+## الأوامر
 
-Detect potentially reversed Arabic literals in a file.
+### check-rtl \<المسار\>
+
+يكتشف النصوص العربية المكتوبة بالعكس داخل الملفات.
+
+**أمثلة على الأخطاء المكتشفة:**
+- `ثحب` بدلاً من `بحث`
+- `دمحم` بدلاً من `محمد`
+- `فلم` بدلاً من `ملف`
 
 ```bash
-arabic-devtools check-rtl src/strings.txt
+arabic-devtools check-rtl ./lib
+arabic-devtools check-rtl ./src --format json
+arabic-devtools check-rtl ./src --severity-threshold high
 ```
 
-**Text output** (default):
-```
-src/strings.txt:12:18 [AR001/high] "ثحب" → بحث — Potentially reversed Arabic literal
-```
+الكود: **AR001** — مستويات الثقة: عالٍ (قاموس) / متوسط / منخفض
 
-**JSON output**:
+يخرج بكود 1 عند وجود نتائج، 0 عند النظافة.
+
+---
+
+### scan \<المسار\>
+
+يفحص الملفات أو المجلدات عن مشاكل عربية شائعة:
+
+- **AR002** — تطويل زائد: `مـحـمـد`
+- **AR003** — تشكيل داخل مفاتيح البحث: `مُحَمَّد`
+- **AR004** — خلط أرقام شرقية وغربية: `رقم ١٢3`
+- **AR001** — نصوص عربية مقلوبة (كما في check-rtl)
+
 ```bash
-arabic-devtools check-rtl src/strings.txt --format json
+arabic-devtools scan ./lib
+arabic-devtools scan ./src --format json
+arabic-devtools scan ./src --severity-threshold medium
 ```
+
+في بيئة CI:
+```bash
+arabic-devtools scan . --format json
+```
+
+يخرج بكود 1 عند وجود نتائج، 0 عند النظافة.
+
+---
+
+### bidi "\<النص\>"
+
+يحوّل النص العربي ليظهر بشكل صحيح في الطرفية (BiDi + تشكيل الحروف).
+
+```bash
+arabic-devtools bidi "مرحبا بالعالم"
+```
+
+يخرج دائماً بكود 0 (ما لم يغب المعامل).
+
+---
+
+## رموز القواعد
+
+| الكود | الاسم | الخطورة |
+|-------|-------|---------|
+| AR001 | potentially-reversed-arabic-literal | عالية / متوسطة / منخفضة |
+| AR002 | excessive-tatweel | متوسطة |
+| AR003 | tashkeel-in-search-key | متوسطة |
+| AR004 | mixed-digit-scripts | منخفضة |
+
+جميع النتائج تشخيصية — لا إصلاح تلقائي.
+
+التفاصيل الكاملة في [docs/rules.md](docs/rules.md).
+
+---
+
+## مثال على مخرجات JSON
+
+```bash
+arabic-devtools check-rtl ./src --format json
+```
+
 ```json
 {
   "tool": "arabic-devtools",
@@ -50,64 +113,25 @@ arabic-devtools check-rtl src/strings.txt --format json
 }
 ```
 
-**Severity threshold** — show only high-severity findings:
+---
+
+## فلترة حسب الخطورة
+
 ```bash
-arabic-devtools check-rtl src/strings.txt --severity-threshold high
+arabic-devtools scan ./src --severity-threshold high
 ```
 
-Exit code 1 if findings; 0 if clean.
+- `low` (الافتراضي) — كل النتائج
+- `medium` — متوسط وعالٍ فقط
+- `high` — عالٍ فقط
 
 ---
 
-### scan \<path\>
+## المكتبات المستخدمة
 
-Scan a file or directory for Arabic text quality issues:
-- Tatweel (`ـ`) in text (AR002)
-- Tashkeel (diacritics) in text (AR003)
-- Mixed Eastern + Western Arabic digits on the same line (AR004)
-- Potentially reversed RTL words (AR001)
+- [@devsamhan/arabic-text](https://www.npmjs.com/package/@devsamhan/arabic-text) — تطبيع النص العربي
+- [@devsamhan/arabic-bidi](https://www.npmjs.com/package/@devsamhan/arabic-bidi) — عرض العربية في الطرفية
 
-```bash
-arabic-devtools scan src/
-arabic-devtools scan src/ --format json
-arabic-devtools scan src/ --severity-threshold medium
-```
+## الترخيص
 
-In CI:
-```bash
-arabic-devtools scan . --format json
-```
-
-Exit code 1 if findings; 0 if clean.
-
----
-
-### bidi "\<text\>"
-
-Prepare Arabic text for correct terminal rendering (BiDi + reshaping).
-
-```bash
-arabic-devtools bidi "مرحبا بالعالم"
-```
-
-Always exits 0 (unless missing argument).
-
----
-
-## Rules
-
-| Code | Rule | Severity |
-|------|------|----------|
-| AR001 | potentially-reversed-arabic-literal | high / medium / low |
-| AR002 | excessive-tatweel | medium |
-| AR003 | tashkeel-in-search-key | medium |
-| AR004 | mixed-digit-scripts | low |
-
-All findings are diagnostic only — no automatic fixes are applied.
-
-See [docs/rules.md](docs/rules.md) for full documentation including examples and
-recommendations for each rule.
-
-## License
-
-MIT
+MIT — [Devsamhan](https://github.com/devsamhan)
