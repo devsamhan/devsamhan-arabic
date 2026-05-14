@@ -8,6 +8,26 @@ import { Finding } from '../src/types';
 const FIXTURES = path.join(__dirname, 'fixtures');
 
 describe('detectReversedInText', () => {
+  // Direction contract: found = the suspicious reversed text from the file,
+  //                     suggestion = the corrected logical Arabic text.
+  // Verified with explicit Unicode escapes to avoid BiDi display ambiguity.
+  it('AR001 direction: found=reversed input, suggestion=corrected form (Unicode escapes)', () => {
+    // 'ثحب' = ثحب  (reversed "بحث")
+    // 'بحث' = بحث  (correct word for "search")
+    const findings = detectReversedInText('ثحب', 'test.txt');
+    expect(findings).toHaveLength(1);
+    expect(findings[0].found).toBe('ثحب'); // ثحب — the suspicious form found in file
+    expect(findings[0].suggestion).toBe('بحث'); // بحث — the corrected form
+  });
+
+  it('AR001 direction: دمحم found, محمد suggested (Unicode escapes)', () => {
+    // 'دمحم' = دمحم  (reversed "محمد")
+    // 'محمد' = محمد  (correct "Muhammad")
+    const findings = detectReversedInText('دمحم', 'test.txt');
+    expect(findings[0].found).toBe('دمحم'); // دمحم — suspicious
+    expect(findings[0].suggestion).toBe('محمد'); // محمد — corrected
+  });
+
   it('returns empty array for clean text', () => {
     expect(detectReversedInText('مرحبا بالعالم', 'test.txt')).toEqual([]);
   });

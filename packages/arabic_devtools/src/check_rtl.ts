@@ -1,11 +1,14 @@
 import { Finding } from './types';
 
+// Keys are the reversed/suspicious forms found in files.
+// Values are the corrected logical Arabic forms (suggestion).
+// Direction: found = key (wrong), suggestion = value (correct).
 const KNOWN_REVERSALS: Record<string, string> = {
-  ثحب: 'بحث',
-  دمحم: 'محمد',
-  تادادعإ: 'إعدادات',
-  فلم: 'ملف',
-  ظفح: 'حفظ',
+  ثحب: 'بحث', // U+062B U+062D U+0628 → U+0628 U+062D U+062B  ("search" reversed → correct)
+  دمحم: 'محمد', // U+062F U+0645 U+062D U+0645 → U+0645 U+062D U+0645 U+062F  ("Muhammad" reversed → correct)
+  تادادعإ: 'إعدادات', // "settings" reversed → correct
+  فلم: 'ملف', // "file" reversed → correct
+  ظفح: 'حفظ', // "save" reversed → correct
 };
 
 function isArabicChar(cp: number): boolean {
