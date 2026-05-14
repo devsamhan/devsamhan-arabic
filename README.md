@@ -94,9 +94,23 @@ TextFormField(
 
 ---
 
+## الأمثلة
+
+| المنصة | arabic_text | arabic_bidi |
+|---|---|---|
+| Dart | [examples/dart/arabic_text_example/](examples/dart/arabic_text_example/) | [examples/dart/arabic_bidi_cli/](examples/dart/arabic_bidi_cli/) |
+| TypeScript | [examples/js/arabic_text_node/](examples/js/arabic_text_node/) | [examples/js/arabic_bidi_cli/](examples/js/arabic_bidi_cli/) |
+| Python | [examples/python/arabic_text_example/](examples/python/arabic_text_example/) | [examples/python/arabic_bidi_cli/](examples/python/arabic_bidi_cli/) |
+
+---
+
 ## التوثيق
 
 [docs/arabic_guide.md](docs/arabic_guide.md) — دليل شامل بالعربية يشمل جميع الدوال والأنماط والأسئلة الشائعة.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) — إرشادات المساهمة، قواعد الـ fixtures، واصطلاحات الـ API.
+
+[RELEASE_NOTES.md](RELEASE_NOTES.md) — سجل الإصدارات.
 
 ---
 

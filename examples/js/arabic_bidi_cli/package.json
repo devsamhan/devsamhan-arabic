@@ -1,0 +1,16 @@
+{
+  "name": "arabic-bidi-cli-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@devsamhan/arabic-bidi": "^1.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

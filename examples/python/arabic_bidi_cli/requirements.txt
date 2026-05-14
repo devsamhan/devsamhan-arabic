@@ -1,0 +1,1 @@
+devsamhan-arabic-bidi==1.0.0

@@ -1,0 +1,16 @@
+{
+  "name": "arabic-text-node-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@devsamhan/arabic-text": "^1.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

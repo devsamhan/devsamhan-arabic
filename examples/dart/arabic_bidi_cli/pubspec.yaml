@@ -1,0 +1,9 @@
+name: arabic_bidi_cli_example
+description: Example for arabic_bidi CLI — devsamhan-arabic
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  arabic_bidi: ^1.0.0

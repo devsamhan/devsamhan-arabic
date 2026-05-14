@@ -1,0 +1,1 @@
+devsamhan-arabic-text==1.0.0
