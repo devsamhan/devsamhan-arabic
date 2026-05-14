@@ -2,6 +2,9 @@
 
 CLI toolkit for Arabic-aware development workflows.
 
+> **Note (v0.1.0)**: All findings are **diagnostic only**. No automatic fixes are applied.
+> The `--fix` flag does not exist in this version. Review findings manually before making changes.
+
 ## Installation
 
 ```bash
