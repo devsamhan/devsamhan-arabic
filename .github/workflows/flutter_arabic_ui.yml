@@ -1,0 +1,23 @@
+name: flutter_arabic_ui CI
+
+on:
+  push:
+    paths:
+      - 'packages/flutter_arabic_ui/**'
+      - '.github/workflows/flutter_arabic_ui.yml'
+  pull_request:
+    paths:
+      - 'packages/flutter_arabic_ui/**'
+      - '.github/workflows/flutter_arabic_ui.yml'
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: cd packages/flutter_arabic_ui && flutter pub get
+      - run: cd packages/flutter_arabic_ui && flutter analyze
+      - run: cd packages/flutter_arabic_ui && flutter test

@@ -1,0 +1,43 @@
+name: arabic_bidi CI
+
+on:
+  push:
+    paths:
+      - 'packages/arabic_bidi/**'
+      - '.github/workflows/arabic_bidi.yml'
+  pull_request:
+    paths:
+      - 'packages/arabic_bidi/**'
+      - '.github/workflows/arabic_bidi.yml'
+
+jobs:
+  dart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - run: cd packages/arabic_bidi/dart && dart pub get
+      - run: cd packages/arabic_bidi/dart && dart analyze
+      - run: cd packages/arabic_bidi/dart && dart test
+
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd packages/arabic_bidi/js && if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: cd packages/arabic_bidi/js && npm run build
+      - run: cd packages/arabic_bidi/js && npm test
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: cd packages/arabic_bidi/python && python -m pip install --upgrade pip
+      - run: cd packages/arabic_bidi/python && pip install -e . pytest
+      - run: cd packages/arabic_bidi/python && python -m pytest tests/ -v

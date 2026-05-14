@@ -1,0 +1,45 @@
+name: arabic_text CI
+
+on:
+  push:
+    paths:
+      - 'packages/arabic_text/**'
+      - 'test_fixtures/**'
+      - '.github/workflows/arabic_text.yml'
+  pull_request:
+    paths:
+      - 'packages/arabic_text/**'
+      - 'test_fixtures/**'
+      - '.github/workflows/arabic_text.yml'
+
+jobs:
+  dart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - run: cd packages/arabic_text/dart && dart pub get
+      - run: cd packages/arabic_text/dart && dart analyze
+      - run: cd packages/arabic_text/dart && dart test
+
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd packages/arabic_text/js && if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: cd packages/arabic_text/js && npm run build
+      - run: cd packages/arabic_text/js && npm test
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: cd packages/arabic_text/python && python -m pip install --upgrade pip
+      - run: cd packages/arabic_text/python && pip install -e . pytest
+      - run: cd packages/arabic_text/python && python -m pytest tests/ -v
