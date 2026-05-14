@@ -134,7 +134,7 @@ docs/
 
 ## المساهمة
 
-اقرأ [SPEC.md](https://github.com/devsamhan/devsamhan-arabic/blob/master/claude/SPEC.md) أولاً — يحدد العقد السلوكي الذي يجب أن تلتزم به جميع المنافذ (Dart، TypeScript، Python).
+اقرأ [SPEC.md](test_fixtures/SPEC.md) أولاً — يحدد العقد السلوكي الذي يجب أن تلتزم به جميع المنافذ (Dart، TypeScript، Python).
 
 أي تغيير في سلوك دالة يتطلب تحديثاً في `test_fixtures/` أولاً.
 
