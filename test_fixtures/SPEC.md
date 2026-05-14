@@ -1,318 +1,274 @@
-# devsamhan-arabic — Behavioral Specification
+# مواصفة Devsamhan Arabic — العقد السلوكي
 
 **SPEC_VERSION: 1.0.0**
 
-This file is the authoritative behavioral contract for all implementations
-of devsamhan-arabic (`arabic_text`). Every port — Dart, TypeScript, Python —
-must produce identical output for each fixture case. The fixture JSON files
-are the ground truth; this document explains the reasoning behind each
-decision.
+هذا الملف هو المرجع السلوكي الرسمي لجميع تطبيقات devsamhan-arabic (`arabic_text`).
+كل منفذ — Dart أو TypeScript أو Python — يجب أن يُنتج مخرجاً مطابقاً لكل حالة في ملفات الاختبار.
+ملفات JSON هي المرجع النهائي؛ هذا الملف يشرح المنطق وراء كل قرار.
 
 ---
 
-## Purpose
+## الهدف
 
-Provide Arabic text normalization that is:
+توفير تطبيع للنص العربي يكون:
 
-- Consistent across programming languages and platforms.
-- Safe for database indexing and full-text search.
-- Predictable: identical input always produces identical output.
-- Minimal: each function does exactly one thing; presets compose them
-  in a documented, fixed order.
-
----
-
-## Philosophy
-
-1. **Fixtures first.** The JSON fixture files define correctness. Code is an
-   implementation; fixtures are the contract. Any discrepancy between code and
-   fixtures must be resolved by fixing the code.
-
-2. **Conservative by default.** Normalization that could corrupt meaning is
-   never applied silently. Functions that change semantics (e.g.,
-   `normalizeTaMarbouta`) are explicit-only and must be called directly.
-
-3. **Preserve what you cannot reconstruct.** Once ة is converted to ه,
-   the original spelling is lost. `toSearchKey` therefore preserves ة; only
-   `toLooseSearchKey` and `toSlug` convert it, and callers opt in knowingly.
-
-4. **Encoding artifacts vs. linguistic choices.** Persian Yeh (ی U+06CC)
-   in Arabic text is an encoding artifact from Persian-layout keyboards.
-   Alef Maqsoura (ى U+0649) is a distinct Arabic letter used in formal
-   spelling. These require different treatment.
-
-5. **This is not a collation library.** `sort()` provides stable, consistent
-   ordering across implementations. It is not a substitute for ICU,
-   locale-aware collation, or full Unicode Collation Algorithm (UCA)
-   compliance. Do not claim otherwise.
+- **متسقاً** عبر لغات البرمجة والمنصات.
+- **آمناً** للفهرسة في قواعد البيانات والبحث النصي.
+- **متوقعاً**: نفس المدخل ينتج دائماً نفس المخرج.
+- **محدوداً**: كل دالة تفعل شيئاً واحداً فقط؛ والإعدادات الجاهزة تُركّب الدوال بترتيب موثق وثابت.
 
 ---
 
-## Definitions
+## الفلسفة
 
-| Term | Definition |
+1. **الاختبارات أولاً.** ملفات JSON تُعرِّف الصحة. الكود تطبيق؛ الاختبارات عقد. أي تعارض بين الكود والاختبارات يُحل بإصلاح الكود.
+
+2. **محافظ بالافتراض.** التطبيع الذي قد يُفسد المعنى لا يُطبَّق بصمت أبداً. الدوال التي تغير الدلالة (مثل `normalizeTaMarbouta`) صريحة فقط وتُستدعى مباشرة.
+
+3. **احفظ ما لا يمكن إعادة بنائه.** بمجرد تحويل ة إلى ه تُفقد الهجاء الأصلي. لذلك تحفظ `toSearchKey` حرف ة؛ وفقط `toLooseSearchKey` و `toSlug` تحوّلانها، والمستدعي يختار ذلك بوعي.
+
+4. **فرق بين أخطاء الترميز والاختيارات اللغوية.** حرف الياء الفارسي (ی U+06CC) في النص العربي خطأ ترميزي نشأ عن لوحات مفاتيح فارسية. أما الألف المقصورة (ى U+0649) فهي حرف عربي مستقل مستخدم في الهجاء الرسمي. كلاهما يستوجب معالجة مختلفة.
+
+5. **هذه ليست مكتبة ترتيب متكاملة.** `sort()` توفر ترتيباً متسقاً وقابلاً للتكرار عبر التطبيقات. إنها ليست بديلاً لـ ICU أو خوارزمية Unicode Collation (UCA). لا تدّعِ خلاف ذلك.
+
+---
+
+## التعريفات
+
+| المصطلح | التعريف |
 |---|---|
-| **Tashkeel** | Short vowel diacritics: fatha (َ), damma (ُ), kasra (ِ), shadda (ّ), sukun (ْ), tanwin forms (ً ٌ ٍ), and related marks (U+064B–U+065E, U+0670). |
-| **Tatweel** | The horizontal stretch character U+0640 (ـ), used for visual stretching only. |
-| **Alef variants** | أ (U+0623), إ (U+0625), آ (U+0622), ٱ (U+0671) — all normalize to bare ا (U+0627). |
-| **Alef Maqsoura** | ى (U+0649) — a distinct Arabic letter, NOT an alef variant. |
-| **Persian Yeh** | ی (U+06CC) — visually similar to ي but a different codepoint; treated as an encoding artifact in Arabic text. |
-| **Ta Marbouta** | ة (U+0629) — feminine ending; semantically meaningful. Preserved in conservative presets. |
-| **Presentation Forms** | Legacy Arabic shapes in blocks FB50–FDFF (Forms-A) and FE70–FEFF (Forms-B). Must be decomposed to canonical codepoints before any other normalization. |
-| **Search key** | A normalized string intended for database storage and full-text search indexing. Not for display. |
-| **Sort key** | A normalized string used as the comparator key for ordering. Derived from `toSearchKey` with ة preserved. |
-| **Loose search key** | An aggressively normalized string used for query-side matching. More variants map to the same key. |
+| **التشكيل (Tashkeel)** | علامات الحركات القصيرة: فتحة (َ)، ضمة (ُ)، كسرة (ِ)، شدة (ّ)، سكون (ْ)، صور التنوين (ً ٌ ٍ)، وما يماثلها (U+064B–U+065E, U+0670). |
+| **التطويل (Tatweel)** | حرف المد الأفقي U+0640 (ـ)، يُستخدم للتمديد البصري فقط. |
+| **صور الألف** | أ (U+0623)، إ (U+0625)، آ (U+0622)، ٱ (U+0671) — تتحول جميعها إلى الألف المجردة ا (U+0627). |
+| **الألف المقصورة** | ى (U+0649) — حرف عربي مستقل، وليست صورة من صور الألف. |
+| **الياء الفارسية** | ی (U+06CC) — تشبه ي بصرياً لكنها كودبوينت مختلفة؛ تُعامَل كخطأ ترميزي في النص العربي. |
+| **التاء المربوطة** | ة (U+0629) — لاحقة تأنيث ذات معنى لغوي. تُحفظ في الإعدادات المحافظة. |
+| **صور العرض (Presentation Forms)** | أشكال العربية القديمة في كتلتي FB50–FDFF (Forms-A) وFE70–FEFF (Forms-B). يجب تفكيكها إلى كودبوينتات أصلية قبل أي تطبيع. |
+| **مفتاح البحث (Search key)** | نص مُطبَّع مخصص لتخزينه في قاعدة البيانات وفهرسته للبحث. لا يُعرض مباشرةً. |
+| **مفتاح الترتيب (Sort key)** | نص مُطبَّع يُستخدم مفتاحاً للمقارنة عند الترتيب. مشتق من `toSearchKey` مع الحفاظ على ة. |
+| **مفتاح البحث المتساهل (Loose search key)** | نص مُطبَّع بقوة أكبر لتوسيع نطاق مطابقة الاستعلامات. |
 
 ---
 
-## Processing Order
+## ترتيب المعالجة
 
-When multiple normalizations are composed (as in `toSearchKey`), they must be
-applied in this exact order. Applying them out of order produces incorrect
-results.
+عند تركيب عدة تطبيعات (كما في `toSearchKey`) يجب تطبيقها بهذا الترتيب الثابت. تغيير الترتيب يُنتج نتائج خاطئة.
 
-| Step | Function | Notes |
+| الخطوة | الدالة | ملاحظات |
 |---|---|---|
-| 1 | `normalizePresentationForms` | Must run first. Presentation-form codepoints would otherwise be missed by letter-level normalizations. |
-| 2 | `removeTatweel` | Remove U+0640 stretch characters. |
-| 3 | `removeTashkeel` | Remove diacritics. After tatweel removal so stretch-plus-diacritic sequences are handled correctly. |
-| 4 | `normalizeAlef` | Normalize alef variants (أ إ آ ٱ → ا). After tashkeel removal to avoid hamza-carrier confusion. |
-| 5 | `normalizeHamza` | Normalize ؤ → ء and ئ → ء. After alef normalization (alef-hamza forms are handled by step 4). |
-| 6 | `normalizeYa` | Normalize ى → ي and ی → ي. |
-| 7 | `normalizeTaMarbouta` | **Explicit-only.** Not called in `toSearchKey`. Called in `toLooseSearchKey`, `toSlug`, and when the caller opts in. |
-| 8 | `normalizeDigits` | **Explicit-only.** Requires a `to` option (`"western"` or `"eastern"`). Not called in any preset. |
-| 9 | Whitespace collapse | Trim leading/trailing whitespace; collapse internal runs of whitespace (spaces, tabs, newlines) to a single space. |
+| 1 | `normalizePresentationForms` | تُنفَّذ أولاً. كودبوينتات صور العرض ستفوت التطبيعات اللاحقة إن لم تُعالَج هنا. |
+| 2 | `removeTatweel` | حذف حروف المد U+0640. |
+| 3 | `removeTashkeel` | حذف علامات الحركات. بعد التطويل لمعالجة تسلسلات المد+الحركة بشكل صحيح. |
+| 4 | `normalizeAlef` | تطبيع صور الألف (أ إ آ ٱ → ا). بعد حذف التشكيل لتجنب الخلط بحاملات الهمزة. |
+| 5 | `normalizeHamza` | تطبيع ؤ → ء وئ → ء. بعد تطبيع الألف (صور ألف-همزة تعالجها الخطوة 4). |
+| 6 | `normalizeYa` | تطبيع ى → ي وی → ي. |
+| 7 | `normalizeTaMarbouta` | **صريحة فقط.** لا تُستدعى في `toSearchKey`. تُستدعى في `toLooseSearchKey` و`toSlug` وعند اختيار المستدعي لها. |
+| 8 | `normalizeDigits` | **صريحة فقط.** تتطلب خياراً `to` (`"western"` أو `"eastern"`). لا تُستدعى في أي إعداد جاهز. |
+| 9 | ضغط المسافات | حذف المسافات الأولى والأخيرة؛ ضغط تسلسلات المسافات الداخلية (مسافات، جدولة، أسطر جديدة) إلى مسافة واحدة. |
 
 ---
 
-## Presets
+## الإعدادات الجاهزة (Presets)
 
-Presets are fixed compositions of surgical functions. Their pipelines must not
-be altered without a `SPEC_VERSION` bump.
+الإعدادات الجاهزة تركيبات ثابتة من الدوال الجراحية. مساراتها لا تُعدَّل دون رفع `SPEC_VERSION`.
 
 ### `toSearchKey(text)`
 
-**Purpose:** Primary normalization for database indexing and full-text search.
-Store the result; index on it; search by comparing two search keys.
+**الغرض:** التطبيع الأساسي لفهرسة قواعد البيانات والبحث النصي.
+خزّن الناتج؛ افهرسه؛ ابحث بمقارنة مفتاحَي بحث.
 
-**Pipeline:** steps 1–6 + step 9 (whitespace collapse).
+**المسار:** الخطوات 1–6 + الخطوة 9 (ضغط المسافات).
 
-**Explicit exclusions:**
-- `normalizeTaMarbouta` is NOT applied. ة is preserved.
-- `normalizeDigits` is NOT applied. Eastern Arabic digits and Latin digits
-  are preserved as-is. Callers who need digit normalization must call it
-  separately.
-- Punctuation is NOT removed.
-- Latin text passes through unchanged (beyond whitespace collapsing).
+**استثناءات صريحة:**
+- `normalizeTaMarbouta` **لا تُطبَّق.** تُحفظ ة.
+- `normalizeDigits` **لا تُطبَّق.** تُحفظ الأرقام العربية الشرقية والأرقام اللاتينية كما هي. المستدعي الذي يحتاج تطبيع الأرقام يستدعيها منفردة.
+- علامات الترقيم **لا تُحذف.**
+- النص اللاتيني يمر دون تغيير (سوى ضغط المسافات).
 
-**Key behaviors (verified in `search_key.json`):**
+**سلوكيات مُتحقَّق منها (من `search_key.json`):**
 
-| Input | Output | Reason |
+| المدخل | المخرج | السبب |
 |---|---|---|
-| `فَاطِمَةُ` | `فاطمة` | ة preserved |
-| `موسى` | `موسي` | ى → ي (step 6) |
-| `مسؤول` | `مسءول` | ؤ → ء (step 5) |
-| `علی` | `علي` | ی → ي (step 6) |
-| `السعر ١٢٥ ريال` | `السعر ١٢٥ ريال` | digits untouched |
-| `ﻣﺮﺣﺒﺎ` | `مرحبا` | presentation forms normalized |
-| `Invoice فاتورة` | `Invoice فاتورة` | Latin preserved |
+| `فَاطِمَةُ` | `فاطمة` | ة محفوظة |
+| `موسى` | `موسي` | ى → ي (الخطوة 6) |
+| `مسؤول` | `مسءول` | ؤ → ء (الخطوة 5) |
+| `علی` | `علي` | ی → ي (الخطوة 6) |
+| `السعر ١٢٥ ريال` | `السعر ١٢٥ ريال` | الأرقام غير مُطبَّعة |
+| `ﻣﺮﺣﺒﺎ` | `مرحبا` | تطبيع صور العرض |
+| `Invoice فاتورة` | `Invoice فاتورة` | اللاتيني محفوظ |
 
 ---
 
 ### `toLooseSearchKey(text)`
 
-**Purpose:** Query-side normalization. More variants map to the same key.
-Use this to normalize a user's search query, not for storage.
+**الغرض:** تطبيع جانب الاستعلام. يُوحِّد المزيد من المتغيرات في مفتاح واحد.
+استخدم هذا لتطبيع استعلام المستخدم، لا للتخزين.
 
-**Pipeline:** all of `toSearchKey` + `normalizeTaMarbouta` (step 7).
+**المسار:** كل خطوات `toSearchKey` + `normalizeTaMarbouta` (الخطوة 7).
 
-**Key difference from `toSearchKey`:** ة → ه.
+**الفرق الجوهري عن `toSearchKey`:** ة → ه.
 
-| Input | toSearchKey | toLooseSearchKey |
+| المدخل | toSearchKey | toLooseSearchKey |
 |---|---|---|
 | `فَاطِمَةُ` | `فاطمة` | `فاطمه` |
 | `مَكَّةُ المُكَرَّمَة` | `مكة المكرمة` | `مكه المكرمه` |
 
-**Usage pattern:** index documents using `toSearchKey`; normalize queries using
-`toLooseSearchKey`. Searching `فاطمه` against an index of `فاطمة` will match
-because both normalize to the same loose key.
+**نمط الاستخدام:** افهرس المستندات باستخدام `toSearchKey`؛ طبِّع الاستعلامات باستخدام `toLooseSearchKey`. البحث عن `فاطمه` في فهرس مبني على `فاطمة` سيُطابق لأن كليهما يُنتج نفس المفتاح المتساهل.
 
 ---
 
 ### `toDisplayKey(text)`
 
-**Purpose:** Light cleanup for display. Makes text visually consistent without
-altering semantics.
+**الغرض:** تنظيف خفيف للعرض. يجعل النص متسقاً بصرياً دون تغيير دلالته.
 
-**Pipeline:** `normalizePresentationForms` + `removeTatweel` only.
+**المسار:** `normalizePresentationForms` + `removeTatweel` فقط.
 
-**Preserves:** tashkeel, alef variants, hamza, ة, ى, digits — everything
-except tatweel and presentation forms.
+**يحفظ:** التشكيل، صور الألف، الهمزة، ة، ى، الأرقام — كل شيء ما عدا التطويل وصور العرض.
 
-| Input | Output |
+| المدخل | المخرج |
 |---|---|
-| `مـُحَمَّد` | `مُحَمَّد` (tatweel removed, tashkeel kept) |
-| `أَحْمَد` | `أَحْمَد` (untouched) |
+| `مـُحَمَّد` | `مُحَمَّد` (التطويل محذوف، التشكيل محفوظ) |
+| `أَحْمَد` | `أَحْمَد` (دون تغيير) |
 | `مـحـمـد @email.com` | `محمد @email.com` |
 
 ---
 
 ### `toSlug(text)`
 
-**Purpose:** Generate URL-safe slugs from Arabic text.
+**الغرض:** توليد slugs آمنة للـ URL من النص العربي.
 
-**Pipeline:** `toSearchKey` steps + `normalizeTaMarbouta` + spaces → hyphens
-+ Latin lowercased + leading/trailing hyphens trimmed.
+**المسار:** خطوات `toSearchKey` + `normalizeTaMarbouta` + المسافات → شرطات + اللاتيني بأحرف صغيرة + حذف الشرطات الأولى والأخيرة.
 
-**Key behaviors:**
+**سلوكيات جوهرية:**
 
-| Input | Output |
+| المدخل | المخرج |
 |---|---|
 | `مدينة الرياض` | `مدينه-الرياض` |
 | `مُحَمَّد الأحمد` | `محمد-الاحمد` |
 | `مدرسة` | `مدرسه` |
 | `تطبيق App` | `تطبيق-app` |
 
-Note: ة → ه in slug (unlike `toSearchKey`). Latin is lowercased.
+ملاحظة: ة → ه في الـ slug (خلافاً لـ `toSearchKey`). اللاتيني يُحوَّل إلى أحرف صغيرة.
 
 ---
 
 ### `normalizeName(text)`
 
-**Purpose:** Canonical form for storing proper names. Strips noise
-(tashkeel, tatweel, presentation forms, alef variants, Persian Yeh) while
-preserving linguistically meaningful distinctions.
+**الغرض:** الصورة المعيارية لتخزين الأسماء الصريحة. تحذف الضوضاء (تشكيل، تطويل، صور عرض، صور الألف، الياء الفارسية) مع الحفاظ على الفروق اللغوية المهمة.
 
-**Pipeline:** `normalizePresentationForms` + `removeTatweel` + `removeTashkeel`
-+ `normalizeAlef` + normalize Persian Yeh only (ی → ي) + whitespace collapse.
+**المسار:** `normalizePresentationForms` + `removeTatweel` + `removeTashkeel` + `normalizeAlef` + تطبيع الياء الفارسية فقط (ی → ي) + ضغط المسافات.
 
-**Key distinctions from `toSearchKey`:**
+**فروق جوهرية عن `toSearchKey`:**
 
-| Character | `toSearchKey` | `normalizeName` | Reason |
+| الحرف | `toSearchKey` | `normalizeName` | السبب |
 |---|---|---|---|
-| ى (U+0649 Alef Maqsoura) | → ي | **preserved** | Linguistically meaningful in names (موسى, يحيى) |
-| ی (U+06CC Persian Yeh) | → ي | → ي | Encoding artifact, not a linguistic choice |
-| ة (U+0629 Ta Marbouta) | preserved | preserved | Both presets preserve ة |
+| ى (U+0649 ألف مقصورة) | → ي | **محفوظة** | ذات معنى لغوي في الأسماء (موسى، يحيى) |
+| ی (U+06CC ياء فارسية) | → ي | → ي | خطأ ترميزي، وليس اختياراً لغوياً |
+| ة (U+0629 تاء مربوطة) | محفوظة | محفوظة | كلا الإعدادَين يحفظان ة |
 
-| Input | Output |
+| المدخل | المخرج |
 |---|---|
 | `مُحَمَّد` | `محمد` |
 | `فَاطِمَةُ` | `فاطمة` |
-| `موسى` | `موسى` (ى preserved) |
-| `مهدی` | `مهدي` (ی normalized) |
-| `يحيى` | `يحيى` (both ى preserved) |
+| `موسى` | `موسى` (ى محفوظة) |
+| `مهدی` | `مهدي` (ی مُطبَّعة) |
+| `يحيى` | `يحيى` (كلتا ى محفوظتان) |
 
 ---
 
 ### `toSortKey(text)`
 
-**Purpose:** Generate the comparator key used by `sort()` and `compare()`.
+**الغرض:** توليد مفتاح المقارنة المستخدم في `sort()` و`compare()`.
 
-**Pipeline:** identical to `toSearchKey` (steps 1–6 + whitespace collapse).
-ة is preserved in sort keys; `normalizeTaMarbouta` is not applied.
+**المسار:** مطابق لـ `toSearchKey` (الخطوات 1–6 + ضغط المسافات).
+تُحفظ ة في مفاتيح الترتيب؛ لا تُطبَّق `normalizeTaMarbouta`.
 
 ---
 
-## Surgical Functions
+## الدوال الجراحية
 
-Individual atomic functions. Each does exactly one thing.
+دوال ذرية مستقلة. كل دالة تفعل شيئاً واحداً فقط.
 
-| Function | Input → Output | Scope |
+| الدالة | المدخل → المخرج | النطاق |
 |---|---|---|
-| `removeTashkeel(text)` | Strips U+064B–U+065E, U+0670 | All Arabic diacritics |
-| `removeTatweel(text)` | Strips U+0640 | Stretch character only; U+0670 is tashkeel, not tatweel |
-| `normalizeAlef(text)` | أ إ آ ٱ → ا | Alef variants only; does not touch ى |
-| `normalizeHamza(text)` | ؤ → ء, ئ → ء | Hamza seats only; alef-hamza forms handled by `normalizeAlef` |
-| `normalizePresentationForms(text)` | FB50–FDFF, FE70–FEFF → canonical | Decomposes legacy Arabic shapes |
-| `normalizeYa(text)` | ى → ي, ی → ي | Both Alef Maqsoura and Persian Yeh |
-| `normalizeTaMarbouta(text)` | ة → ه | **Explicit-only.** Never called automatically. |
-| `normalizeDigits(text, options)` | Converts digit script | Requires `options.to` = `"western"` or `"eastern"` |
+| `removeTashkeel(text)` | يحذف U+064B–U+065E, U+0670 | جميع علامات التشكيل العربية |
+| `removeTatweel(text)` | يحذف U+0640 | حرف المد فقط؛ U+0670 تشكيل وليس تطويلاً |
+| `normalizeAlef(text)` | أ إ آ ٱ → ا | صور الألف فقط؛ لا يلمس ى |
+| `normalizeHamza(text)` | ؤ → ء، ئ → ء | مواضع الهمزة فقط؛ صور ألف-همزة تعالجها `normalizeAlef` |
+| `normalizePresentationForms(text)` | FB50–FDFF، FE70–FEFF → أصلية | تفكيك الأشكال العربية القديمة |
+| `normalizeYa(text)` | ى → ي، ی → ي | الألف المقصورة والياء الفارسية كليهما |
+| `normalizeTaMarbouta(text)` | ة → ه | **صريحة فقط.** لا تُستدعى تلقائياً قط. |
+| `normalizeDigits(text, options)` | تحويل خط الأرقام | تتطلب `options.to` = `"western"` أو `"eastern"` |
 
 ---
 
-## `ArabicNormalizeOptions` / `normalizeDigits` options
+## ArabicNormalizeOptions
 
-`normalizeDigits` is the only surgical function that takes an options argument.
+`normalizeDigits` هي الدالة الجراحية الوحيدة التي تقبل معاملاً للخيارات.
 
-| Option | Values | Meaning |
+| الخيار | القيم | المعنى |
 |---|---|---|
-| `to` | `"western"` | Convert Eastern Arabic (٠–٩) and Persian (۰–۹) digits to 0–9 |
-| `to` | `"eastern"` | Convert Western (0–9) digits to Eastern Arabic (٠–٩) |
+| `to` | `"western"` | تحويل الأرقام العربية الشرقية (٠–٩) والفارسية (۰–۹) إلى 0–9 |
+| `to` | `"eastern"` | تحويل الأرقام اللاتينية (0–9) إلى الأرقام العربية الشرقية (٠–٩) |
 
-Non-digit characters pass through unchanged in both directions.
+الحروف غير الرقمية تمر دون تغيير في الاتجاهين.
 
-The function converts **all three digit scripts** (Western, Eastern Arabic,
-Persian) to the target script when `"western"` is specified. When `"eastern"`
-is specified, only Western digits are converted; Persian digits are also
-converted to Eastern Arabic.
+عند تحديد `"western"` تُحوَّل الأنظمة الثلاثة (اللاتينية، العربية الشرقية، الفارسية) إلى الهدف. عند تحديد `"eastern"` تُحوَّل الأرقام اللاتينية والفارسية إلى الأرقام العربية الشرقية.
 
 ---
 
-## What Must NOT Be Normalized by Default
+## ما لا يُطبَّع افتراضياً
 
-The following are **never** applied in `toSearchKey`, `toSortKey`,
-`normalizeName`, or `toDisplayKey` without explicit caller opt-in:
+ما يلي **لا يُطبَّق أبداً** في `toSearchKey` أو `toSortKey` أو `normalizeName` أو `toDisplayKey` دون اختيار صريح من المستدعي:
 
-- **`normalizeTaMarbouta`** — converting ة to ه changes spelling and loses
-  information. Applied only in `toLooseSearchKey`, `toSlug`, and explicit calls.
+- **`normalizeTaMarbouta`** — تحويل ة إلى ه يغيّر الهجاء ويفقد معلومة. تُطبَّق فقط في `toLooseSearchKey` و`toSlug` والاستدعاء الصريح.
 
-- **`normalizeDigits`** — digit script is not a spelling error. Applications
-  control which digit script they store and display. `toSearchKey` preserves
-  Eastern Arabic digits as-is (fixture `sk-mixed-003`).
+- **`normalizeDigits`** — خط الأرقام ليس خطأ إملائياً. التطبيقات تتحكم في أي خط أرقام تخزّنه وتعرضه. تحفظ `toSearchKey` الأرقام العربية الشرقية كما هي (اختبار `sk-mixed-003`).
 
-- **Punctuation removal** — punctuation is structural. Stripping it blindly
-  would corrupt file paths, IDs, and formatted numbers.
+- **حذف علامات الترقيم** — الترقيم بنيوي. حذفه بصمت يُفسد مسارات الملفات والمعرّفات والأرقام المُنسَّقة.
 
-- **Definite article (ال) stripping** — stripping `ال` for sort requires
-  locale knowledge and is not universally correct. Not applied in v1.
+- **حذف أل التعريف** — يستلزم معرفة السياق ولا ينطبق بشكل عام. لا يُطبَّق في الإصدار الأول.
 
-- **Case normalization of Latin text** — Latin characters are preserved
-  exactly. `toSlug` is the only function that lowercases Latin, and only in
-  that context.
+- **تحويل النص اللاتيني إلى أحرف صغيرة** — تُحفظ الحروف اللاتينية بحالتها الأصلية. `toSlug` هي الدالة الوحيدة التي تُصغِّر اللاتيني، وفي سياقها فقط.
 
 ---
 
-## Numbers
+## الأرقام
 
-### `normalizeDigits` function
+### دالة `normalizeDigits`
 
-Supports conversion between three digit scripts:
+تدعم التحويل بين ثلاثة أنظمة أرقام:
 
-| Script | Range | Example |
+| النظام | النطاق | مثال |
 |---|---|---|
-| Western (ASCII) | U+0030–U+0039 | `0123456789` |
-| Eastern Arabic | U+0660–U+0669 | `٠١٢٣٤٥٦٧٨٩` |
-| Persian extended | U+06F0–U+06F9 | `۰۱۲۳۴۵۶۷۸۹` |
+| اللاتيني (ASCII) | U+0030–U+0039 | `0123456789` |
+| العربي الشرقي | U+0660–U+0669 | `٠١٢٣٤٥٦٧٨٩` |
+| الفارسي الممتد | U+06F0–U+06F9 | `۰۱۲۳۴۵۶۷۸۹` |
 
-All three scripts are mutually convertible. Non-digit characters pass through.
-The decimal separator (`.`) and thousands separator (`,`) are not converted.
+الأنظمة الثلاثة قابلة للتحويل المتبادل. الحروف غير الرقمية تمر دون تغيير.
+الفاصل العشري (`.`) وفاصل الآلاف (`,`) لا يُحوَّلان.
 
-### Digit normalization in presets
+### تطبيع الأرقام في الإعدادات الجاهزة
 
-`toSearchKey` does **not** normalize digits. Eastern Arabic digits in a search
-key remain as Eastern Arabic digits (fixture `sk-mixed-003`).
+`toSearchKey` **لا تُطبِّع الأرقام.** الأرقام العربية الشرقية في مفتاح البحث تبقى عربية شرقية (اختبار `sk-mixed-003`).
 
-This is a deliberate decision: digit representation is a display and locale
-concern, not a spelling normalization. Callers who need unified digit keys
-must chain `normalizeDigits` before or after `toSearchKey` explicitly.
+هذا قرار متعمد: تمثيل الأرقام قرار عرض ومحلّي، لا قرار تطبيع إملائي. المستدعون الذين يريدون مفاتيح أرقام موحدة يجب أن يُسلسلوا `normalizeDigits` قبل `toSearchKey` أو بعدها.
 
 ---
 
-## Mixed Arabic/English Text
+## النص المختلط
 
-All normalization functions operate on the full Unicode string and must not
-corrupt non-Arabic content.
+جميع دوال التطبيع تعمل على سلسلة Unicode الكاملة ويجب ألا تُفسد المحتوى غير العربي.
 
-**Invariants:**
-- Latin letters pass through unchanged (except `toSlug` which lowercases them).
-- ASCII digits pass through unchanged in all presets.
-- Email addresses, file paths, IDs, and URLs embedded in Arabic text must
-  survive normalization intact.
-- Only characters in Arabic Unicode blocks are subject to Arabic normalization.
+**ثوابت لا تُكسَر:**
+- الحروف اللاتينية تمر دون تغيير (سوى `toSlug` التي تُصغِّرها).
+- الأرقام اللاتينية تمر دون تغيير في جميع الإعدادات الجاهزة.
+- عناوين البريد الإلكتروني ومسارات الملفات والمعرّفات والروابط المضمَّنة في النص العربي يجب أن تنجو من التطبيع سليمة.
+- فقط الحروف في كتل Unicode العربية تخضع للتطبيع العربي.
 
-**Verified in fixtures:**
+**مُتحقَّق منه في الاختبارات:**
 
-| Input | Function | Output |
+| المدخل | الدالة | المخرج |
 |---|---|---|
 | `Hello مُحَمَّد` | `removeTashkeel` | `Hello محمد` |
 | `Invoice فاتورة` | `toSearchKey` | `Invoice فاتورة` |
@@ -322,73 +278,59 @@ corrupt non-Arabic content.
 
 ---
 
-## Sorting
+## الترتيب والفرز
 
-### `sort(list)` and `compare(a, b)`
+### `sort(list)` و`compare(a, b)`
 
-`sort()` accepts a list of strings and returns a new list sorted by
-`toSortKey`. The original strings are returned (not the sort keys).
-The sort is **stable**: strings whose sort keys are identical retain their
-original relative order.
+`sort()` تقبل قائمة نصوص وتُعيد قائمة مرتبة وفق `toSortKey`. تُعاد النصوص الأصلية (لا مفاتيح الترتيب). الترتيب **مستقر**: النصوص التي تتطابق مفاتيحها تحتفظ بترتيبها الأصلي النسبي.
 
-`compare(a, b)` returns `-1`, `0`, or `1` using the same key comparison.
+`compare(a, b)` تُعيد `-1` أو `0` أو `1` بنفس منطق المقارنة.
 
-### What this is
+### ما هو هذا الترتيب
 
-- Consistent, reproducible ordering across all ports.
-- Equivalent strings (hamza/alef/tashkeel variants) sort together.
-- Stable: equal-keyed items preserve input order.
+- ترتيب متسق وقابل للتكرار عبر جميع المنافذ.
+- المتغيرات المتكافئة (همزة، ألف، تشكيل) تُرتَّب معاً.
+- مستقر: العناصر المتساوية المفاتيح تحتفظ بترتيب المدخل.
 
-### What this is NOT
+### ما ليس هذا الترتيب
 
-- **Not full Arabic dictionary collation.** The Arabic dictionary places
-  root letters before derived forms and applies locale-specific rules
-  (e.g., ث before ج, ignoring ال prefixes for indexing). This library
-  does not implement that.
-- **Not ICU/Unicode Collation Algorithm.** Do not claim UCA or
-  CLDR-equivalent behavior.
-- **No definite article stripping.** `الرياض` and `رياض` are different
-  sort keys in v1. Full collation with article stripping may be added as
-  `ArabicCollator` in v2.
+- **ليس ترتيباً قاموسياً عربياً كاملاً.** القواميس العربية تضع الجذور قبل المشتقات وتطبق قواعد محلّية (مثل ث قبل ج، تجاهل ال للفهرسة). هذه المكتبة لا تطبق ذلك.
+- **ليس ICU أو Unicode Collation Algorithm.** لا تدّعِ توافقاً مع UCA أو CLDR.
+- **لا حذف لأل التعريف.** `الرياض` و`رياض` مفتاحان مختلفان في الإصدار الأول.
 
-### Sort key rules
+### قواعد مفتاح الترتيب
 
-- Derived via `toSearchKey` (steps 1–6 + whitespace).
-- ة is **preserved** in sort keys. `فاطمة` and `فاطمه` produce different
-  sort keys; they will not be grouped unless the caller normalizes first.
-- Sort order for Arabic letters follows Unicode codepoint order of the
-  normalized key (lexical, not phonetic/dictionary).
+- مشتق من `toSearchKey` (الخطوات 1–6 + المسافات).
+- ة **محفوظة** في مفاتيح الترتيب. `فاطمة` و`فاطمه` ينتجان مفتاحَين مختلفَين؛ لن يُجمَعا ما لم يُطبِّع المستدعي أولاً.
+- ترتيب الحروف العربية يتبع ترتيب كودبوينتات Unicode للمفتاح المُطبَّع (ترتيب معجمي لا صوتي).
 
-### Verified sort results (fixture `sorting.json`)
+### نتائج الترتيب المُتحقَّق منها (اختبار `sorting.json`)
 
 ```
-Input:  [يوسف, أحمد, إبراهيم, محمد, آدم]
-Keys:   [يوسف, احمد, ابراهيم, محمد, ادم]
-Sorted: [إبراهيم, أحمد, آدم, محمد, يوسف]
+المدخل:  [يوسف، أحمد، إبراهيم، محمد، آدم]
+المفاتيح: [يوسف، احمد، ابراهيم، محمد، ادم]
+المرتب:  [إبراهيم، أحمد، آدم، محمد، يوسف]
 ```
 
 ---
 
-## Cross-Language Implementation Requirements
+## متطلبات التطبيق عبر اللغات
 
-All ports must:
+كل منفذ يجب أن:
 
-1. **Pass all fixture cases** with exact string/value equality.
-2. **Implement API naming conventions:**
-   - Dart: `camelCase` (e.g., `toSearchKey`, `normalizeAlef`)
-   - TypeScript: `camelCase` (same as Dart)
-   - Python: `snake_case` (e.g., `to_search_key`, `normalize_alef`)
-3. **Expose `SPEC_VERSION`** as a constant string `'1.0.0'`.
-4. **Implement the processing order** (§Processing Order) identically.
-   Do not combine steps or change their sequence.
-5. **Zero runtime dependencies** for `arabic_text`. The library must be
-   self-contained.
-6. **No behavior additions** without a fixture to cover them. If it is not in
-   a fixture, it is not specified.
+1. **يجتاز جميع حالات الاختبار** بتطابق نصي دقيق للقيمة.
+2. **يلتزم باصطلاحات التسمية:**
+   - Dart: `camelCase` (مثل `toSearchKey`، `normalizeAlef`)
+   - TypeScript: `camelCase` (نفس Dart)
+   - Python: `snake_case` (مثل `to_search_key`، `normalize_alef`)
+3. **يُصدِّر `SPEC_VERSION`** كثابت نصي `'1.0.0'`.
+4. **يُطبِّق ترتيب المعالجة** (§ترتيب المعالجة) بشكل مطابق. لا تدمج الخطوات ولا تغير تسلسلها.
+5. **لا تبعيات وقت تشغيل** في `arabic_text`. المكتبة يجب أن تكون مستقلة بذاتها.
+6. **لا إضافة سلوك** بدون اختبار يغطيه. ما ليس في الاختبارات غير مُعرَّف.
 
 ---
 
-## Fixture File Format
+## صيغة ملفات الاختبار
 
 ```json
 {
@@ -399,121 +341,87 @@ All ports must:
   },
   "cases": [
     {
-      "id": "unique-id",
-      "name": "Human-readable description",
-      "operation": "functionName",
+      "id": "معرف-فريد",
+      "name": "وصف مقروء",
+      "operation": "اسمالدالة",
       "input": "...",
       "expected": "...",
       "options": {},
-      "notes": "Optional explanation"
+      "notes": "تفسير اختياري"
     }
   ]
 }
 ```
 
-- `operation`: the exact function name in camelCase. Ports map this to their
-  naming convention.
-- `options`: present only for `normalizeDigits`.
-- `input` for `sort` and `compare` operations is an array, not a string.
-- `expected` for `sort` is an array; for `compare` is `-1`, `0`, or `1`;
-  for `isArabic` is `true` or `false`; for `arabicRatio` is a float.
+- `operation`: اسم الدالة بـ camelCase. المنافذ تُترجم هذا إلى اصطلاح لغتها.
+- `options`: موجود فقط لـ `normalizeDigits`.
+- `input` لعمليات `sort` و`compare` مصفوفة وليست نصاً.
+- `expected` لـ `sort` مصفوفة؛ لـ `compare` قيمة `-1` أو `0` أو `1`؛ لـ `isArabic` قيمة `true` أو `false`؛ لـ `arabicRatio` عدد عشري.
 
 ---
 
-## Contribution Rules
+## قواعد المساهمة
 
-1. **Read this file first.** Changes to behavior require a change here first.
-2. **Fixtures are the contract.** A new normalization behavior requires a new
-   fixture case before any code is written.
-3. **Bump `SPEC_VERSION`** if any observable behavior changes for existing
-   inputs. Do not bump for new cases that cover previously unspecified inputs.
-4. **All ports must pass all fixtures** after any change. A change that
-   breaks one port breaks the spec.
-5. **`normalizeTaMarbouta` is explicit-only.** It must never appear in the
-   pipeline of `toSearchKey`, `toSortKey`, or `normalizeName`.
-6. **`normalizeDigits` is explicit-only.** It must never appear in any preset.
-7. **Do not claim full BiDi or full collation.** `arabic_bidi` implements a
-   simplified reshaping algorithm suitable for CLI/logs. `arabic_text` sorting
-   is not full Arabic dictionary collation.
-8. **Latin text must survive.** Any normalization that corrupts embedded
-   Latin characters, digits, punctuation, or identifiers is a bug.
+1. **اقرأ هذا الملف أولاً.** أي تغيير في السلوك يستلزم تغييراً هنا أولاً.
+2. **الاختبارات هي العقد.** سلوك جديد يتطلب حالة اختبار جديدة قبل كتابة أي كود.
+3. **ارفع `SPEC_VERSION`** إذا تغيّر أي سلوك ملحوظ لمدخلات قائمة. لا ترفعه لحالات جديدة تغطي مدخلات غير مُعرَّفة سابقاً.
+4. **كل المنافذ يجب أن تجتاز جميع الاختبارات** بعد أي تغيير. تغيير يكسر منفذاً واحداً يكسر المواصفة.
+5. **`normalizeTaMarbouta` صريحة فقط.** يجب ألا تظهر في مسار `toSearchKey` أو `toSortKey` أو `normalizeName`.
+6. **`normalizeDigits` صريحة فقط.** يجب ألا تظهر في أي إعداد جاهز.
+7. **لا تدّعِ BiDi كاملاً أو ترتيباً متكاملاً.** `arabic_bidi` تطبق خوارزمية تشكيل مبسّطة مناسبة للـ CLI والـ logs. ترتيب `arabic_text` ليس ترتيباً قاموسياً عربياً متكاملاً.
+8. **النص اللاتيني يجب أن ينجو.** أي تطبيع يُفسد حروفاً لاتينية أو أرقاماً أو ترقيماً أو معرّفات مضمَّنة هو خطأ برمجي.
 
 ---
 
-## Resolved Decisions
+## القرارات المحسومة
 
-### Q1 — Persian Yeh (ی U+06CC)
+### Q1 — الياء الفارسية (ی U+06CC)
 
-**Decision:** Normalize ی → ي in `normalizeYa`, `toSearchKey`, `toSortKey`.
-Preserve ى (Alef Maqsoura) in `normalizeName` but normalize it in
-`toSearchKey` and `toSortKey`.
+**القرار:** تطبيع ی → ي في `normalizeYa` و`toSearchKey` و`toSortKey`.
+الحفاظ على ى (ألف مقصورة) في `normalizeName` لكن تطبيعها في `toSearchKey` و`toSortKey`.
 
-**Rationale:** Persian Yeh appears in Arabic text as an encoding artifact
-from Persian-layout keyboards. It is not a distinct Arabic letter; normalizing
-it eliminates spurious mismatches between users on different keyboard layouts.
-Alef Maqsoura (ى) is a distinct Arabic letter used in formal spelling
-(e.g., موسى, ليلى); `normalizeName` preserves it because renaming a person
-is not normalization.
+**المنطق:** تظهر الياء الفارسية في النص العربي كخطأ ترميزي من لوحات المفاتيح الفارسية. إنها ليست حرفاً عربياً مستقلاً؛ تطبيعها يُزيل التعارضات الظاهرة بين مستخدمي لوحات مفاتيح مختلفة. أما الألف المقصورة (ى) فهي حرف عربي مستقل مستخدم في الهجاء الرسمي (مثل موسى، ليلى)؛ `normalizeName` تحفظها لأن إعادة تسمية شخص ليست تطبيعاً.
 
-**Status:** Resolved. Fixtures: `ya-persian-001` through `ya-persian-004`,
-`sk-persian-ya-001`, `sk-persian-ya-002`, `name-003`, `name-004`.
+**الحالة:** محسوم. الاختبارات: `ya-persian-001` إلى `ya-persian-004`، `sk-persian-ya-001`، `sk-persian-ya-002`، `name-003`، `name-004`.
 
 ---
 
-### Q4 — Scope of `normalizeHamza`
+### Q4 — نطاق `normalizeHamza`
 
-**Decision:** `normalizeHamza` converts only ؤ (U+0624) → ء and ئ (U+0626) → ء.
-It does not touch hamza-on-alef forms (أ U+0623, إ U+0625, آ U+0622).
-It does not perform contextual spelling correction (i.e., it does not infer
-the "correct" hamza seat for a given word).
+**القرار:** `normalizeHamza` تحوّل فقط ؤ (U+0624) → ء وئ (U+0626) → ء.
+لا تلمس صور همزة-ألف (أ U+0623، إ U+0625، آ U+0622).
+لا تُصحِّح مواضع الهمزة بالسياق (أي لا تستنتج الموضع الصحيح للهمزة في كلمة بعينها).
 
-**Rationale:** Hamza seats on alef are already handled by `normalizeAlef`.
-Inferring the correct hamza seat (e.g., whether مسئول should be مسؤول or
-مسئول) requires morphological analysis that is outside the scope of this
-library. `normalizeHamza` eliminates the ؤ/ئ vs ء distinction for search
-purposes without attempting to spell-correct.
+**المنطق:** همزات الألف تعالجها `normalizeAlef`. استنتاج موضع الهمزة الصحيح (هل مسئول يجب أن تكتب مسؤول؟) يستلزم تحليلاً صرفياً خارج نطاق هذه المكتبة. `normalizeHamza` تُزيل التمييز بين ؤ وئ من جهة وء من جهة أخرى لأغراض البحث، دون محاولة تصحيح الإملاء.
 
-**Status:** Resolved. Fixtures: `hamza-001` through `hamza-004`,
-`sk-hamza-001`, `sk-hamza-002`.
+**الحالة:** محسوم. الاختبارات: `hamza-001` إلى `hamza-004`، `sk-hamza-001`، `sk-hamza-002`.
 
 ---
 
-## Open Questions
+## الأسئلة المفتوحة
 
-### Q2 — `toSearchKey` digit normalization
+### Q2 — تطبيع الأرقام في `toSearchKey`
 
-**Question:** Should `toSearchKey` optionally accept a flag to normalize
-Eastern Arabic and Persian digits to Western digits in one call?
+**السؤال:** هل يجب أن تقبل `toSearchKey` اختيارياً علامة لتطبيع الأرقام العربية الشرقية والفارسية إلى لاتينية في استدعاء واحد؟
 
-**Current behavior:** Digits are never normalized in `toSearchKey`. Callers
-must call `normalizeDigits` separately. This means a document indexed with
-`١٢٣` will not match a query for `123` unless both sides are digit-normalized.
+**السلوك الحالي:** الأرقام لا تُطبَّع أبداً في `toSearchKey`. المستدعون يجب أن يستدعوا `normalizeDigits` منفردة. هذا يعني أن مستنداً مفهرساً بـ `١٢٣` لن يُطابق استعلاماً عن `123` ما لم يُطبَّع الطرفان.
 
-**Arguments for:** Eliminates a common caller mistake; most full-text search
-callers want unified digit keys.
+**حجج للتطبيق:** يُزيل خطأً شائعاً للمستدعين؛ معظم تطبيقات البحث النصي تريد مفاتيح أرقام موحدة.
 
-**Arguments against:** Digit script is a locale decision, not a spelling
-normalization. An application may legitimately want to preserve and index
-Eastern Arabic digits.
+**حجج ضده:** خط الأرقام قرار محلّي لا قرار إملائي. تطبيق ما قد يريد شرعياً فهرسة وعرض الأرقام العربية الشرقية كما هي.
 
-**Status:** Unresolved for v1. Callers must normalize digits explicitly.
+**الحالة:** غير محسوم في الإصدار الأول. المستدعون يطبّعون الأرقام بشكل صريح.
 
 ---
 
-### Q3 — Definite article stripping in sort
+### Q3 — حذف أل التعريف في الترتيب
 
-**Question:** Should `toSortKey` strip the definite article `ال` for sort
-purposes, so that `الرياض` sorts as if it were `رياض`?
+**السؤال:** هل يجب أن تحذف `toSortKey` حرف التعريف `ال` لأغراض الترتيب، بحيث تُرتَّب `الرياض` كأنها `رياض`؟
 
-**Current behavior:** `ال` is preserved in sort keys. `الرياض` and `رياض`
-produce different sort keys and sort in different positions.
+**السلوك الحالي:** `ال` محفوظة في مفاتيح الترتيب. `الرياض` و`رياض` مفتاحان مختلفان ويقعان في مواضع مختلفة عند الترتيب.
 
-**Arguments for:** Arabic dictionaries and phonebooks traditionally sort
-names by their root letters, ignoring the definite article.
+**حجج للتطبيق:** القواميس العربية ودفاتر الهاتف تقليدياً ترتّب الأسماء بجذورها متجاهلةً أل التعريف.
 
-**Arguments against:** Article stripping requires knowing whether `ال` is
-truly a definite article or part of the word (e.g., `الله`, `إيلا`). Naive
-stripping of leading `ال` produces wrong results for some words. A correct
-implementation requires morphological analysis or a whitelist.
+**حجج ضده:** حذف `ال` يستلزم معرفة ما إذا كانت أل التعريف فعلاً أم جزءاً من الكلمة (مثل `الله`، `إيلا`). الحذف الساذج لـ `ال` في البداية يُنتج نتائج خاطئة لبعض الكلمات. التطبيق الصحيح يستلزم تحليلاً صرفياً أو قائمة بيضاء.
 
-**Status:** Unresolved for v1. May be addressed in `ArabicCollator` (v2).
+**الحالة:** غير محسوم في الإصدار الأول. قد يُعالَج في `ArabicCollator` (الإصدار الثاني).
