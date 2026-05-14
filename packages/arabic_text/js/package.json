@@ -1,10 +1,15 @@
 {
   "name": "@devsamhan/arabic-text",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Arabic text normalization — devsamhan-arabic spec v1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "commonjs",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",

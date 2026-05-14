@@ -1,0 +1,40 @@
+{
+  "name": "@devsamhan/arabic-bidi",
+  "version": "1.0.2",
+  "description": "Arabic terminal reshaping and BiDi — devsamhan-arabic spec v1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "commonjs",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc"
+  },
+  "keywords": [
+    "arabic",
+    "bidi",
+    "rtl",
+    "terminal",
+    "reshaping",
+    "unicode"
+  ],
+  "author": "devsamhan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devsamhan/devsamhan-arabic.git"
+  },
+  "homepage": "https://github.com/devsamhan/devsamhan-arabic",
+  "dependencies": {
+    "@devsamhan/arabic-text": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
