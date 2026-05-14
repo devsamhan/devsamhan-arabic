@@ -12,9 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/devsamhan/devsamhan-arabic"
+    "url": "git+https://github.com/devsamhan/devsamhan-arabic.git"
   },
-  "keywords": ["arabic", "normalization", "search", "rtl"],
+  "keywords": [
+    "arabic",
+    "normalization",
+    "search",
+    "rtl"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",

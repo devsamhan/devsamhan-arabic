@@ -6,11 +6,11 @@
 
 ## المكتبات
 
-| المكتبة | الوصف | البيئة الحالية | قادماً | pub.dev |
-|---|---|---|---|---|
-| [`arabic_text`](packages/arabic_text/dart/) | توحيد النص العربي وفهرسته | Dart + Flutter | TypeScript · Python | [![pub.dev](https://img.shields.io/pub/v/arabic_text.svg)](https://pub.dev/packages/arabic_text) |
-| [`arabic_bidi`](packages/arabic_bidi/dart/) | عرض العربية صحيحاً في الطرفية | CLI / سكريبت | TypeScript · Python | [![pub.dev](https://img.shields.io/pub/v/arabic_bidi.svg)](https://pub.dev/packages/arabic_bidi) |
-| [`flutter_arabic_ui`](packages/flutter_arabic_ui/) | حقول إدخال وتحقق للاستخدام | Flutter فقط | — | [![pub.dev](https://img.shields.io/pub/v/flutter_arabic_ui.svg)](https://pub.dev/packages/flutter_arabic_ui) |
+| المكتبة | Dart | TypeScript | Python |
+|---|---|---|---|
+| [`arabic_text`](packages/arabic_text/) | [![pub.dev](https://img.shields.io/pub/v/arabic_text.svg)](https://pub.dev/packages/arabic_text) | [![npm](https://img.shields.io/npm/v/@devsamhan/arabic-text.svg)](https://www.npmjs.com/package/@devsamhan/arabic-text) | [![PyPI](https://img.shields.io/pypi/v/devsamhan-arabic-text.svg)](https://pypi.org/project/devsamhan-arabic-text/) |
+| [`arabic_bidi`](packages/arabic_bidi/) | [![pub.dev](https://img.shields.io/pub/v/arabic_bidi.svg)](https://pub.dev/packages/arabic_bidi) | قادماً | قادماً |
+| [`flutter_arabic_ui`](packages/flutter_arabic_ui/) | [![pub.dev](https://img.shields.io/pub/v/flutter_arabic_ui.svg)](https://pub.dev/packages/flutter_arabic_ui) | — | — |
 
 ---
 
