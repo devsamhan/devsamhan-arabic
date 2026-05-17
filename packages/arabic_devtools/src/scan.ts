@@ -96,6 +96,11 @@ function collectFiles(target: string): string[] {
 }
 
 export function scanPath(targetPath: string): Finding[] {
+  if (!fs.existsSync(targetPath)) {
+    const err = new Error(`Path not found: ${targetPath}`);
+    (err as NodeJS.ErrnoException).code = 'PATH_NOT_FOUND';
+    throw err;
+  }
   const files = collectFiles(targetPath);
   const all: Finding[] = [];
   for (const file of files) {

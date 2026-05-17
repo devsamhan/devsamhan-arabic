@@ -25,7 +25,11 @@ export function detectReversedInText(text: string, file: string): Finding[] {
 
   for (let i = 0; i < lines.length; i++) {
     const lineNum = i + 1;
-    const wordRegex = /\S+/g;
+    // Arabic character-only regex: strips surrounding punctuation/quotes so that
+    // Arabic inside code string literals ('ثحب', "ثحب";) is extracted correctly.
+    // Ranges: U+0600-06FF (Arabic), U+0750-077F (Supplement),
+    //         U+FB50-FDFF (Pres. Forms-A), U+FE70-FEFF (Pres. Forms-B).
+    const wordRegex = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]+/g;
     let match: RegExpExecArray | null;
 
     while ((match = wordRegex.exec(lines[i])) !== null) {

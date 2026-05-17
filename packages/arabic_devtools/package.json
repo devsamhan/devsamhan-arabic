@@ -1,6 +1,6 @@
 {
   "name": "@devsamhan/arabic-devtools",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Arabic-aware CLI toolkit for development workflows — devsamhan-arabic",
   "private": false,
   "type": "commonjs",

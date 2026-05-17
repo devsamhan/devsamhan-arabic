@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs';
-import { detectIssuesInText } from '../src/scan';
+import { detectIssuesInText, scanPath } from '../src/scan';
+import { runBidi } from '../src/bidi';
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 
@@ -78,5 +79,51 @@ describe('scan fixtures', () => {
     const content = fs.readFileSync(path.join(FIXTURES, 'clean_mixed.txt'), 'utf-8');
     const findings = detectIssuesInText(content, 'clean_mixed.txt');
     expect(findings).toHaveLength(0);
+  });
+});
+
+describe('scanPath error handling', () => {
+  it('throws with code PATH_NOT_FOUND for non-existent path', () => {
+    expect(() => scanPath('/nonexistent/path/that/does/not/exist')).toThrow();
+    try {
+      scanPath('/nonexistent/path/that/does/not/exist');
+    } catch (err: unknown) {
+      expect((err as NodeJS.ErrnoException).code).toBe('PATH_NOT_FOUND');
+      expect((err as Error).message).toContain('Path not found');
+    }
+  });
+});
+
+describe('bidi modes', () => {
+  const arabicText = 'مرحبا';
+  // Multi-word Arabic: reorder swaps word order; reshape-only preserves it.
+  const multiWordArabic = 'مرحبا بالعالم';
+
+  function capture(fn: () => void): string {
+    let out = '';
+    const orig = process.stdout.write.bind(process.stdout);
+    (process.stdout as any).write = (s: string) => { out += s; return true; };
+    fn();
+    (process.stdout as any).write = orig;
+    return out;
+  }
+
+  it('full mode (default) returns a string', () => {
+    const output = capture(() => runBidi(arabicText, 'full'));
+    expect(typeof output).toBe('string');
+    expect(output.length).toBeGreaterThan(0);
+  });
+
+  it('reshape-only produces different output from full for multi-word RTL text', () => {
+    const fullOut    = capture(() => runBidi(multiWordArabic, 'full'));
+    const reshapeOut = capture(() => runBidi(multiWordArabic, 'reshape-only'));
+    // full reorders word runs; reshape-only keeps original word order
+    expect(fullOut).not.toBe(reshapeOut);
+  });
+
+  it('no-reshape mode returns a string', () => {
+    const output = capture(() => runBidi(arabicText, 'no-reshape'));
+    expect(typeof output).toBe('string');
+    expect(output.length).toBeGreaterThan(0);
   });
 });

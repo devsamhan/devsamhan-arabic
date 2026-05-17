@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as path from 'path';
+import * as os from 'os';
 import * as fs from 'fs';
 import { detectReversedInText } from '../src/check_rtl';
 import { filterBySeverity, buildJsonOutput } from '../src/utils';
@@ -7,27 +8,51 @@ import { Finding } from '../src/types';
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 
-describe('detectReversedInText', () => {
-  // Direction contract: found = the suspicious reversed text from the file,
-  //                     suggestion = the corrected logical Arabic text.
-  // Verified with explicit Unicode escapes to avoid BiDi display ambiguity.
-  it('AR001 direction: found=reversed input, suggestion=corrected form (Unicode escapes)', () => {
-    // 'ثحب' = ثحب  (reversed "بحث")
-    // 'بحث' = بحث  (correct word for "search")
-    const findings = detectReversedInText('ثحب', 'test.txt');
+describe('AR001 Unicode contract', () => {
+  // All string literals here use explicit \uXXXX escapes so the direction
+  // cannot be misread by any editor, terminal, or BiDi renderer.
+  const REVERSED_SEARCH   = 'ثحب'; // ثحب — reversed form of بحث "search"
+  const CORRECT_SEARCH    = 'بحث'; // بحث — correct form
+  const REVERSED_MUHAMMAD = 'دمحم'; // دمحم — reversed form of محمد "Muhammad"
+  const CORRECT_MUHAMMAD  = 'محمد'; // محمد — correct form
+
+  it('U+062B U+062D U+0628 (ثحب): found=reversed, suggestion=correct, severity=high', () => {
+    const findings = detectReversedInText(REVERSED_SEARCH, 'test.txt');
     expect(findings).toHaveLength(1);
-    expect(findings[0].found).toBe('ثحب'); // ثحب — the suspicious form found in file
-    expect(findings[0].suggestion).toBe('بحث'); // بحث — the corrected form
+    expect(findings[0].code).toBe('AR001');
+    expect(findings[0].severity).toBe('high');
+    expect(findings[0].found).toBe(REVERSED_SEARCH);
+    expect(findings[0].suggestion).toBe(CORRECT_SEARCH);
   });
 
-  it('AR001 direction: دمحم found, محمد suggested (Unicode escapes)', () => {
-    // 'دمحم' = دمحم  (reversed "محمد")
-    // 'محمد' = محمد  (correct "Muhammad")
-    const findings = detectReversedInText('دمحم', 'test.txt');
-    expect(findings[0].found).toBe('دمحم'); // دمحم — suspicious
-    expect(findings[0].suggestion).toBe('محمد'); // محمد — corrected
+  it('U+062F U+0645 U+062D U+0645 (دمحم): found=reversed, suggestion=correct, severity=high', () => {
+    const findings = detectReversedInText(REVERSED_MUHAMMAD, 'test.txt');
+    expect(findings).toHaveLength(1);
+    expect(findings[0].code).toBe('AR001');
+    expect(findings[0].severity).toBe('high');
+    expect(findings[0].found).toBe(REVERSED_MUHAMMAD);
+    expect(findings[0].suggestion).toBe(CORRECT_MUHAMMAD);
   });
 
+  it('correct form U+0628 U+062D U+062B (بحث) is not flagged', () => {
+    expect(detectReversedInText(CORRECT_SEARCH, 'test.txt')).toHaveLength(0);
+  });
+
+  it('correct form U+0645 U+062D U+0645 U+062F (محمد) is not flagged', () => {
+    expect(detectReversedInText(CORRECT_MUHAMMAD, 'test.txt')).toHaveLength(0);
+  });
+
+  it('unicode_reversed.txt fixture: detects both reversed words', () => {
+    const content = fs.readFileSync(path.join(FIXTURES, 'unicode_reversed.txt'), 'utf-8');
+    const findings = detectReversedInText(content, 'unicode_reversed.txt');
+    expect(findings).toHaveLength(2);
+    const found = findings.map((f) => f.found);
+    expect(found).toContain(REVERSED_SEARCH);
+    expect(found).toContain(REVERSED_MUHAMMAD);
+  });
+});
+
+describe('detectReversedInText', () => {
   it('returns empty array for clean text', () => {
     expect(detectReversedInText('مرحبا بالعالم', 'test.txt')).toEqual([]);
   });
@@ -168,5 +193,62 @@ describe('fixtures', () => {
     const content = fs.readFileSync(path.join(FIXTURES, 'clean_arabic.txt'), 'utf-8');
     const findings = detectReversedInText(content, 'clean_arabic.txt');
     expect(findings).toHaveLength(0);
+  });
+});
+
+describe('integration: temp file with explicit Unicode escapes (code-like content)', () => {
+  // All strings use raw \uXXXX escapes — zero BiDi ambiguity at the source level.
+  const WRONG_SEARCH   = 'ثحب'; // ثحب  reversed "search"
+  const WRONG_MUHAMMAD = 'دمحم'; // دمحم  reversed "Muhammad"
+  const OK_SEARCH      = 'بحث'; // بحث  correct "search"
+  const OK_MUHAMMAD    = 'محمد'; // محمد  correct "Muhammad"
+
+  // Simulate the exact Dart/JS file that triggered the real-world bug report:
+  // Arabic appears inside single-quoted string literals, not as bare words.
+  const CODE_CONTENT = [
+    `const wrongHint = '${WRONG_SEARCH}';`,
+    `const wrongName = '${WRONG_MUHAMMAD}';`,
+    `const okHint = '${OK_SEARCH}';`,
+    `const okName = '${OK_MUHAMMAD}';`,
+  ].join('\n');
+
+  const tmpFile = path.join(os.tmpdir(), `arabic-devtools-integration-${Date.now()}.dart`);
+  let findings: ReturnType<typeof detectReversedInText>;
+
+  beforeAll(() => {
+    fs.writeFileSync(tmpFile, CODE_CONTENT, 'utf-8');
+    const read = fs.readFileSync(tmpFile, 'utf-8');
+    findings = detectReversedInText(read, tmpFile);
+  });
+
+  afterAll(() => {
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+  });
+
+  it('produces exactly 2 findings for code file with 2 reversed + 2 correct Arabic literals', () => {
+    expect(findings).toHaveLength(2);
+  });
+
+  it('detects reversed search form inside string literal (U+062B U+062D U+0628)', () => {
+    expect(findings.map((f) => f.found)).toContain(WRONG_SEARCH);
+  });
+
+  it('detects reversed Muhammad form inside string literal (U+062F U+0645 U+062D U+0645)', () => {
+    expect(findings.map((f) => f.found)).toContain(WRONG_MUHAMMAD);
+  });
+
+  it('does not flag correct search form (U+0628 U+062D U+062B)', () => {
+    expect(findings.map((f) => f.found)).not.toContain(OK_SEARCH);
+  });
+
+  it('does not flag correct Muhammad form (U+0645 U+062D U+0645 U+062F)', () => {
+    expect(findings.map((f) => f.found)).not.toContain(OK_MUHAMMAD);
+  });
+
+  it('found fields contain only Arabic characters — no surrounding punctuation', () => {
+    for (const f of findings) {
+      const cps = [...f.found].map((c) => c.codePointAt(0)!);
+      expect(cps.every((cp) => cp >= 0x0600 && cp <= 0x06ff)).toBe(true);
+    }
   });
 });
