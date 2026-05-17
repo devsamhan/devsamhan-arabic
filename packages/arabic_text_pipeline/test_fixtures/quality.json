@@ -1,0 +1,127 @@
+{
+  "fixture_version": "0.1.0",
+  "cases": [
+    {
+      "id": "quality-001",
+      "name": "clean Arabic paragraph",
+      "input": "العقد شريعة المتعاقدين، ولا يجوز نقضه إلا باتفاق الطرفين أو بحكم القانون. وتسري على العقد أحكام الشريعة الإسلامية فيما لم يرد فيه نص.",
+      "expected": {
+        "arabic_ratio_min": 0.85,
+        "issues": [],
+        "quality": "good"
+      }
+    },
+    {
+      "id": "quality-002",
+      "name": "text with excessive tatweel",
+      "input": "مـــحـــمـــد بـــن عـــبـــد الله كـــان رجـــلاً صـــالـــحـــاً",
+      "expected": {
+        "arabic_ratio_min": 0.7,
+        "issues": ["AQ001_EXCESSIVE_TATWEEL"],
+        "quality": "warning"
+      }
+    },
+    {
+      "id": "quality-003",
+      "name": "text with dense tashkeel",
+      "input": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ الرَّحْمَٰنِ الرَّحِيمِ",
+      "expected": {
+        "arabic_ratio_min": 0.7,
+        "issues": ["AQ002_TASHKEEL_DENSE"],
+        "quality": "good"
+      }
+    },
+    {
+      "id": "quality-004",
+      "name": "text with mixed Arabic and Latin",
+      "input": "تم تسجيل الملف رقم PDF-2024-001 في قاعدة البيانات database بتاريخ 12/03/2024",
+      "expected": {
+        "arabic_ratio_min": 0.4,
+        "issues": ["AQ007_LOW_ARABIC_RATIO"],
+        "quality": "warning"
+      }
+    },
+    {
+      "id": "quality-005",
+      "name": "text with many isolated letters",
+      "input": "م ح م د ب ن ع ب د ا ل ل ه ص ل ى ع ل ي ه و س ل م",
+      "expected": {
+        "arabic_ratio_min": 0.5,
+        "issues": ["AQ004_SEPARATED_LETTERS"],
+        "quality": "warning"
+      }
+    },
+    {
+      "id": "quality-006",
+      "name": "visually reversed Arabic sentence",
+      "input": "ملاسلا هيلع دمحم يبنلا ةلاسر",
+      "expected": {
+        "arabic_ratio_min": 0.8,
+        "issues": ["AQ003_POSSIBLY_REVERSED"],
+        "quality": "warning"
+      }
+    },
+    {
+      "id": "quality-007",
+      "name": "OCR noisy text",
+      "input": "العق|د شريع€ة المتعاق~دين ولا يج#وز نق@ضه إلا ب^اتف&اق الط*رفين",
+      "expected": {
+        "arabic_ratio_min": 0.5,
+        "issues": ["AQ006_OCR_NOISE"],
+        "quality": "poor"
+      }
+    },
+    {
+      "id": "quality-008",
+      "name": "Arabic text with digit mixing",
+      "input": "المادة ١٢ من القانون رقم 15 لسنة ٢٠٢٣ تنص على أن المخالف يغرم بمبلغ 500 ريال أو ٥٠٠ دينار",
+      "expected": {
+        "arabic_ratio_min": 0.6,
+        "issues": ["AQ005_MIXED_DIGITS"],
+        "quality": "good"
+      }
+    },
+    {
+      "id": "quality-009",
+      "name": "empty text",
+      "input": "",
+      "expected": {
+        "arabic_ratio_min": 0.0,
+        "arabic_ratio_max": 0.0,
+        "issues": ["AQ007_LOW_ARABIC_RATIO"],
+        "quality": "poor"
+      }
+    },
+    {
+      "id": "quality-010",
+      "name": "mostly non-Arabic text",
+      "input": "This document was prepared by the legal department. Contract reference: SLA-2024-EN-007. Please review all clauses carefully before signing.",
+      "expected": {
+        "arabic_ratio_max": 0.1,
+        "issues": ["AQ007_LOW_ARABIC_RATIO"],
+        "quality": "warning"
+      }
+    },
+    {
+      "id": "quality-011",
+      "name": "whitespace-only text",
+      "input": "   \n\t  \n  ",
+      "expected": {
+        "arabic_ratio_min": 0.0,
+        "arabic_ratio_max": 0.0,
+        "issues": ["AQ007_LOW_ARABIC_RATIO"],
+        "quality": "poor"
+      }
+    },
+    {
+      "id": "quality-012",
+      "name": "Arabic text with minimal tatweel that is not excessive",
+      "input": "قال الإمام مالك ـ رحمه الله ـ في المدوّنة: لا بأس بذلك.",
+      "expected": {
+        "arabic_ratio_min": 0.7,
+        "issues": [],
+        "quality": "good"
+      }
+    }
+  ]
+}

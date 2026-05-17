@@ -1,0 +1,172 @@
+{
+  "fixture_version": "0.1.0",
+  "cases": [
+    {
+      "id": "llm-001",
+      "name": "normalize whitespace in LLM output",
+      "input": {
+        "text": "العقد   شريعة    المتعاقدين،  ولا  يجوز  نقضه",
+        "options": {}
+      },
+      "expected": {
+        "clean_text": "العقد شريعة المتعاقدين، ولا يجوز نقضه",
+        "original_text": "العقد   شريعة    المتعاقدين،  ولا  يجوز  نقضه",
+        "warnings": []
+      }
+    },
+    {
+      "id": "llm-002",
+      "name": "remove repeated empty lines",
+      "input": {
+        "text": "السطر الأول\n\n\n\nالسطر الثاني\n\n\nالسطر الثالث",
+        "options": {}
+      },
+      "expected": {
+        "clean_text": "السطر الأول\n\nالسطر الثاني\n\nالسطر الثالث",
+        "original_text": "السطر الأول\n\n\n\nالسطر الثاني\n\n\nالسطر الثالث",
+        "warnings": []
+      }
+    },
+    {
+      "id": "llm-003",
+      "name": "preserve Arabic punctuation",
+      "input": {
+        "text": "قال: «العقد شريعة المتعاقدين»، وأضاف: «لا يجوز نقضه».",
+        "options": {}
+      },
+      "expected": {
+        "clean_text": "قال: «العقد شريعة المتعاقدين»، وأضاف: «لا يجوز نقضه».",
+        "original_text": "قال: «العقد شريعة المتعاقدين»، وأضاف: «لا يجوز نقضه».",
+        "warnings": []
+      }
+    },
+    {
+      "id": "llm-004",
+      "name": "preserve Quranic diacritic-heavy text by default",
+      "input": {
+        "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+        "options": {}
+      },
+      "expected": {
+        "clean_text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+        "original_text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+        "warnings_contain": "tashkeel_preserved"
+      }
+    },
+    {
+      "id": "llm-005",
+      "name": "produce search_key when requested",
+      "input": {
+        "text": "مـحـمـد بن عبد الله صلى الله عليه وسلم",
+        "options": {
+          "produce_search_key": true
+        }
+      },
+      "expected": {
+        "clean_text": "محمد بن عبد الله صلى الله عليه وسلم",
+        "search_key": "محمد بن عبد الله صلى الله عليه وسلم",
+        "warnings": []
+      }
+    },
+    {
+      "id": "llm-006",
+      "name": "produce loose_search_key when requested",
+      "input": {
+        "text": "العقد شريعة المتعاقدين ولا يجوز نقضه إلا باتفاق الطرفين",
+        "options": {
+          "produce_search_key": true,
+          "produce_loose_search_key": true
+        }
+      },
+      "expected": {
+        "search_key_present": true,
+        "loose_search_key_present": true,
+        "warnings": []
+      }
+    },
+    {
+      "id": "llm-007",
+      "name": "metadata summary is included in output",
+      "input": {
+        "text": "العقد شريعة المتعاقدين، ولا يجوز نقضه إلا باتفاق الطرفين أو بحكم القانون.",
+        "options": {}
+      },
+      "expected": {
+        "metadata_fields": ["char_count", "arabic_char_count", "arabic_ratio", "chunk_count", "quality", "pipeline_version"],
+        "metadata": {
+          "quality": "good",
+          "pipeline_version": "0.1.0"
+        }
+      }
+    },
+    {
+      "id": "llm-008",
+      "name": "quality_report is included in output",
+      "input": {
+        "text": "العقد شريعة المتعاقدين، ولا يجوز نقضه إلا باتفاق الطرفين أو بحكم القانون.",
+        "options": {}
+      },
+      "expected": {
+        "quality_report_fields": ["quality", "arabic_ratio", "issues"],
+        "quality_report": {
+          "quality": "good",
+          "issues": []
+        }
+      }
+    },
+    {
+      "id": "llm-009",
+      "name": "chunks are included in output for structured text",
+      "input": {
+        "text": "الفصل الأول: في العقود\nالعقد هو ارتباط إيجاب بقبول على وجه مشروع.\n\nالفصل الثاني: في الالتزامات\nالالتزام هو واجب قانوني.",
+        "options": {}
+      },
+      "expected": {
+        "chunk_count_min": 2,
+        "chunks_present": true,
+        "warnings": []
+      }
+    },
+    {
+      "id": "llm-010",
+      "name": "warning added when unsafe repair skipped",
+      "input": {
+        "text": "ملاسلا هيلع دمحم يبنلا ةلاسر",
+        "options": {}
+      },
+      "expected": {
+        "changed": false,
+        "warnings_contain": "unsafe_repair_skipped"
+      }
+    },
+    {
+      "id": "llm-011",
+      "name": "original_text always present and unmodified",
+      "input": {
+        "text": "مـحـمـد   بـن   عـبـد   الله",
+        "options": {}
+      },
+      "expected": {
+        "original_text": "مـحـمـد   بـن   عـبـد   الله",
+        "clean_text_differs_from_original": true
+      }
+    },
+    {
+      "id": "llm-012",
+      "name": "full pipeline output shape for clean text",
+      "input": {
+        "text": "الباب الأول: في أحكام العقود\nالعقد شريعة المتعاقدين ولا يجوز نقضه إلا باتفاق الطرفين أو بحكم القانون وتسري على العقد أحكام الشريعة الإسلامية.\n\nالباب الثاني: في أحكام البيع\nالبيع هو تمليك مال بمال على وجه التراضي وهو من أكثر العقود شيوعاً في التجارة.",
+        "options": {
+          "produce_search_key": true
+        }
+      },
+      "expected": {
+        "output_fields": ["original_text", "clean_text", "quality_report", "chunks", "search_key", "warnings", "metadata"],
+        "metadata": {
+          "quality": "good"
+        },
+        "chunk_count_min": 2
+      }
+    }
+  ]
+}

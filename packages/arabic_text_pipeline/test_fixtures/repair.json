@@ -1,0 +1,171 @@
+{
+  "fixture_version": "0.1.0",
+  "cases": [
+    {
+      "id": "repair-001",
+      "name": "remove excessive tatweel",
+      "input": "مـحـمـد",
+      "expected": {
+        "repaired_text": "محمد",
+        "changed": true,
+        "issues_fixed": ["AQ001_EXCESSIVE_TATWEEL"],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-002",
+      "name": "normalize multiple consecutive spaces",
+      "input": "العقد   شريعة    المتعاقدين",
+      "expected": {
+        "repaired_text": "العقد شريعة المتعاقدين",
+        "changed": true,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-003",
+      "name": "preserve original text in original_text field",
+      "input": "مـحـمـد بـن عـبـد الله",
+      "expected": {
+        "original_text": "مـحـمـد بـن عـبـد الله",
+        "repaired_text": "محمد بن عبد الله",
+        "changed": true,
+        "issues_fixed": ["AQ001_EXCESSIVE_TATWEEL"]
+      }
+    },
+    {
+      "id": "repair-004",
+      "name": "detect reversed text but do not auto-repair",
+      "input": "ملاسلا هيلع دمحم يبنلا",
+      "expected": {
+        "repaired_text": "ملاسلا هيلع دمحم يبنلا",
+        "changed": false,
+        "issues_fixed": [],
+        "suggestions": [
+          {
+            "type": "reverse_text",
+            "reason": "AQ003_POSSIBLY_REVERSED",
+            "safe": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "repair-005",
+      "name": "do not merge separated Arabic letters - ambiguous case",
+      "input": "م ح م د ب ن ع ب د الله",
+      "expected": {
+        "changed": false,
+        "issues_fixed": [],
+        "suggestions": [
+          {
+            "type": "merge_separated_letters",
+            "reason": "AQ004_SEPARATED_LETTERS",
+            "safe": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "repair-006",
+      "name": "clean zero-width characters conservatively",
+      "input": "العقد​شريعة‌المتعاقدين‍ولا﻿يجوز",
+      "expected": {
+        "repaired_text": "العقدشريعةالمتعاقدينولايجوز",
+        "changed": true,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-007",
+      "name": "do not modify Latin invoice numbers or identifiers",
+      "input": "المرجع: INV-2024-0012 بتاريخ 15/03/2024",
+      "expected": {
+        "repaired_text": "المرجع: INV-2024-0012 بتاريخ 15/03/2024",
+        "changed": false,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-008",
+      "name": "do not modify filenames embedded in Arabic text",
+      "input": "تم حفظ الملف باسم contract_2024_final_v2.pdf في المجلد",
+      "expected": {
+        "repaired_text": "تم حفظ الملف باسم contract_2024_final_v2.pdf في المجلد",
+        "changed": false,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-009",
+      "name": "normalize mixed line endings to LF",
+      "input": "السطر الأول\r\nالسطر الثاني\r\nالسطر الثالث",
+      "expected": {
+        "repaired_text": "السطر الأول\nالسطر الثاني\nالسطر الثالث",
+        "changed": true,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-010",
+      "name": "clean text with no issues - no changes made",
+      "input": "العقد شريعة المتعاقدين، ولا يجوز نقضه إلا باتفاق الطرفين.",
+      "expected": {
+        "original_text": "العقد شريعة المتعاقدين، ولا يجوز نقضه إلا باتفاق الطرفين.",
+        "repaired_text": "العقد شريعة المتعاقدين، ولا يجوز نقضه إلا باتفاق الطرفين.",
+        "changed": false,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-011",
+      "name": "remove trailing whitespace from lines",
+      "input": "النص الأول   \nالنص الثاني  \nالنص الثالث",
+      "expected": {
+        "repaired_text": "النص الأول\nالنص الثاني\nالنص الثالث",
+        "changed": true,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-012",
+      "name": "do not remove tashkeel by default",
+      "input": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+      "expected": {
+        "repaired_text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        "changed": false,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-013",
+      "name": "remove bidi directional marks inserted by PDF extraction",
+      "input": "العقد ‪شريعة‬ المتعاقدين",
+      "expected": {
+        "repaired_text": "العقد شريعة المتعاقدين",
+        "changed": true,
+        "issues_fixed": [],
+        "suggestions": []
+      }
+    },
+    {
+      "id": "repair-014",
+      "name": "combined repair - tatweel and whitespace",
+      "input": "مـحـمـد   بـن   عـبـد   الله",
+      "expected": {
+        "repaired_text": "محمد بن عبد الله",
+        "changed": true,
+        "issues_fixed": ["AQ001_EXCESSIVE_TATWEEL"],
+        "suggestions": []
+      }
+    }
+  ]
+}
