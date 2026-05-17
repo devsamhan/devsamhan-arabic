@@ -12,6 +12,7 @@
 | [`arabic_bidi`](packages/arabic_bidi/) | عرض العربية في الطرفية | [![pub.dev](https://img.shields.io/pub/v/arabic_bidi.svg)](https://pub.dev/packages/arabic_bidi) | [![npm](https://img.shields.io/npm/v/@devsamhan/arabic-bidi.svg)](https://www.npmjs.com/package/@devsamhan/arabic-bidi) | [![PyPI](https://img.shields.io/pypi/v/devsamhan-arabic-bidi.svg)](https://pypi.org/project/devsamhan-arabic-bidi/) |
 | [`flutter_arabic_ui`](packages/flutter_arabic_ui/) | مكوّنات Flutter العربية | [![pub.dev](https://img.shields.io/pub/v/flutter_arabic_ui.svg)](https://pub.dev/packages/flutter_arabic_ui) | — | — |
 | [`arabic_devtools`](packages/arabic_devtools/) | أدوات CLI للمطور العربي | — | [![npm](https://img.shields.io/npm/v/@devsamhan/arabic-devtools.svg)](https://www.npmjs.com/package/@devsamhan/arabic-devtools) | — |
+| [`arabic_text_pipeline`](packages/arabic_text_pipeline/) | إصلاح وتقييم النصوص بعد الاستخراج (Alpha) | — | — | [![PyPI](https://img.shields.io/pypi/v/devsamhan-arabic-text-pipeline.svg)](https://pypi.org/project/devsamhan-arabic-text-pipeline/) |
 
 ---
 
