@@ -7,6 +7,7 @@ from __future__ import annotations
 TATWEEL = "ـ"       # ـ  (kashida)
 TA_MARBUTA = "ة"    # ة  — always word-final in standard Arabic
 ALEF_MAQSURA = "ى"  # ى  — always word-final in standard Arabic
+_LAM_ALEF = "لا"  # لا — reversed definite article ال
 
 _ARABIC_RANGES = (
     (0x0600, 0x06FF),   # Arabic
@@ -42,6 +43,13 @@ def _is_tashkeel(ch: str) -> bool:
 
 def _is_noise(ch: str) -> bool:
     return not _is_arabic(ch) and ch not in _OK_NON_ARABIC
+
+
+def _base_letters(core: str) -> str:
+    return "".join(
+        ch for ch in core
+        if _is_arabic(ch) and not _is_tashkeel(ch) and ch != TATWEEL
+    )
 
 
 def _issue(code: str, severity: str, message: str, evidence: str | None = None) -> dict:
@@ -133,18 +141,23 @@ def analyze_quality(text: str) -> dict:
         if core:
             arabic_cores.append(core)
 
-    # AQ003: Possibly reversed — word core (len >= 2) starts with ة or ى
+    # AQ003: Possibly reversed — word core starts with ة/ى, or base core (len≥5) ends with لا
     if arabic_cores:
         reversed_starts = [
             w for w in arabic_cores
             if len(w) >= 2 and w[0] in (TA_MARBUTA, ALEF_MAQSURA)
         ]
-        if reversed_starts:
+        reversed_by_article = [
+            w for w in arabic_cores
+            if len(_base_letters(w)) >= 5 and _base_letters(w).endswith(_LAM_ALEF)
+        ]
+        if reversed_starts or reversed_by_article:
+            evidence = (reversed_starts or reversed_by_article)[0]
             issues.append(_issue(
                 "AQ003_POSSIBLY_REVERSED", "medium",
-                "Arabic words begin with characters (ة/ى) that are always word-final in "
-                "standard Arabic, suggesting visually reversed text.",
-                evidence=reversed_starts[0],
+                "Arabic words begin with characters (ة/ى) that are always word-final, "
+                "or end with a reversed definite article (لا), suggesting visually reversed text.",
+                evidence=evidence,
             ))
 
     # AQ004: Separated letters — high ratio of single-char Arabic word cores
