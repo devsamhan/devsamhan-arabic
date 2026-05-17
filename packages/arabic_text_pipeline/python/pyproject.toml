@@ -1,25 +1,26 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "devsamhan-arabic-text-pipeline"
 version = "0.1.0"
-description = "Python-first Arabic text quality and preprocessing pipeline"
+description = "Python-first Arabic text quality analysis, repair, chunking, and LLM preparation pipeline"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 authors = [{ name = "devsamhan" }]
-keywords = ["arabic", "nlp", "text", "preprocessing", "pipeline"]
+keywords = ["arabic", "nlp", "text", "preprocessing", "pipeline", "llm"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Text Processing :: Linguistic",
 ]
 dependencies = []
@@ -27,6 +28,14 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
 
+[project.urls]
+"Homepage" = "https://github.com/devsamhan/devsamhan-arabic"
+"Source" = "https://github.com/devsamhan/devsamhan-arabic/tree/master/packages/arabic_text_pipeline"
+"Bug Tracker" = "https://github.com/devsamhan/devsamhan-arabic/issues"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["devsamhan_arabic_text_pipeline*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
