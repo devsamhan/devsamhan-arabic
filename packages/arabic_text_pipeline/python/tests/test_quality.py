@@ -130,3 +130,30 @@ class TestQualityFocused:
         for text in ["", "hello", "مرحبا"]:
             result = analyze_quality(text)
             assert result["quality"] in _VALID_QUALITIES
+
+    def test_single_tatweel_in_word_triggers_aq001_low(self):
+        # "مـحـمـد" has isolated tatweels between Arabic letters — adjacent, not consecutive.
+        result = analyze_quality("مـحـمـد")
+        codes = {iss["code"] for iss in result["issues"]}
+        assert "AQ001_EXCESSIVE_TATWEEL" in codes
+        aq001 = next(i for i in result["issues"] if i["code"] == "AQ001_EXCESSIVE_TATWEEL")
+        assert aq001["severity"] == "low"
+        assert result["quality"] == "good"   # low-only → quality stays good
+
+    def test_consecutive_tatweel_run_triggers_aq001_medium(self):
+        # "مـــحمد" has a run of 3 consecutive tatweels — should be medium severity.
+        result = analyze_quality("مـــحمد")
+        codes = {iss["code"] for iss in result["issues"]}
+        assert "AQ001_EXCESSIVE_TATWEEL" in codes
+        aq001 = next(i for i in result["issues"] if i["code"] == "AQ001_EXCESSIVE_TATWEEL")
+        assert aq001["severity"] == "medium"
+        assert result["quality"] == "warning"
+
+    def test_standalone_tatweel_em_dash_style_not_flagged(self):
+        # "مالك ـ رحمه" — tatweel surrounded by spaces, used as punctuation separator.
+        # quality-012 fixture also verifies this; this focused test makes the intent explicit.
+        text = "قال الإمام مالك ـ رحمه الله ـ في المدوّنة: لا بأس بذلك."
+        result = analyze_quality(text)
+        codes = {iss["code"] for iss in result["issues"]}
+        assert "AQ001_EXCESSIVE_TATWEEL" not in codes
+        assert result["quality"] == "good"

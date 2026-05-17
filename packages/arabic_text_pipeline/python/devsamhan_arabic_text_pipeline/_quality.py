@@ -107,20 +107,43 @@ def analyze_quality(text: str) -> dict:
             f"(threshold: {_AQ007_THRESHOLD:.0%}).",
         ))
 
-    # AQ001: Excessive tatweel — any consecutive run of length >= 2
+    # AQ001: Tatweel inside Arabic words.
+    # Flag any tatweel (U+0640) that is immediately adjacent to an Arabic base letter.
+    # Severity: medium when there are consecutive runs (max_run >= 2); low for isolated usage.
+    # Standalone tatweel surrounded by spaces (em-dash style) is NOT flagged.
+    tatweel_in_words = 0
     max_run = current_run = 0
-    for ch in text:
+    for i, ch in enumerate(text):
         if ch == TATWEEL:
             current_run += 1
             if current_run > max_run:
                 max_run = current_run
+            prev_arabic_base = (
+                i > 0
+                and _is_arabic(text[i - 1])
+                and text[i - 1] != TATWEEL
+            )
+            next_arabic_base = (
+                i < len(text) - 1
+                and _is_arabic(text[i + 1])
+                and text[i + 1] != TATWEEL
+            )
+            if prev_arabic_base or next_arabic_base:
+                tatweel_in_words += 1
         else:
             current_run = 0
-    if max_run >= 2:
-        issues.append(_issue(
-            "AQ001_EXCESSIVE_TATWEEL", "medium",
-            f"Consecutive tatweel (kashida) decoration detected (max run: {max_run}).",
-        ))
+
+    if tatweel_in_words:
+        if max_run >= 2:
+            severity = "medium"
+            message = f"Consecutive tatweel (kashida) decoration detected (max run: {max_run})."
+        else:
+            severity = "low"
+            message = (
+                f"Tatweel (kashida) found inside {tatweel_in_words} "
+                "Arabic word position(s); repair will remove it."
+            )
+        issues.append(_issue("AQ001_EXCESSIVE_TATWEEL", severity, message))
 
     # AQ002: Dense tashkeel
     arabic_base = sum(
