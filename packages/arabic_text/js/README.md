@@ -2,7 +2,7 @@
 
 مكتبة JavaScript/TypeScript لتطبيع النص العربي — تشكيل، ألفات، همزات، بحث، فرز.
 
-بدون تبعيات خارجية. متوافقة مع [مواصفات devsamhan-arabic v1.0.0](https://github.com/devsamhan/devsamhan-arabic).
+بدون تبعيات خارجية. متوافقة مع [مواصفات devsamhan-arabic v1.0.1](https://github.com/devsamhan/devsamhan-arabic).
 
 ## التثبيت
 
@@ -28,9 +28,10 @@ import {
 toSearchKey('مُحَمَّدٌ');       // → 'محمد'
 toSearchKey('فاطمة العلي');   // → 'فاطمة العلي'
 
-// مفتاح متساهل للاستعلام (يطابق فاطمة وفاطمه)
+// مفتاح متساهل: طبّقه على المفتاح المخزن المتساهل والاستعلام معاً
 toLooseSearchKey('فاطمة');    // → 'فاطمه'
-toLooseSearchKey('فاطمه');    // → 'فاطمه'  ← تطابق!
+toLooseSearchKey('فاطمه');    // → 'فاطمه'
+// ⚠️ لا تقارن هذا المفتاح بعمود toSearchKey الصارم؛ استخدم عموداً متساهلاً.
 
 // slug لـ URL
 toSlug('مدينة الرياض');       // → 'مدينه-الرياض'
@@ -41,6 +42,7 @@ sort(['يوسف', 'أحمد', 'محمد']); // → ['أحمد', 'محمد', 'ي�
 // تحويل الأرقام
 normalizeDigits('١٢٣', 'western'); // → '123'
 normalizeDigits('123', 'eastern'); // → '١٢٣'
+normalizeDigits('۱۲۳', 'eastern'); // → '١٢٣' (Persian is a source)
 ```
 
 ---
@@ -50,7 +52,7 @@ normalizeDigits('123', 'eastern'); // → '١٢٣'
 | الدالة | الوصف |
 |---|---|
 | `toSearchKey(text)` | مفتاح بحث للتخزين. يحافظ على ة. |
-| `toLooseSearchKey(text)` | مثل toSearchKey + ة→ه. للاستعلام فقط. |
+| `toLooseSearchKey(text)` | مثل toSearchKey + ة→ه. للمفتاح المتساهل المخزن والاستعلام معاً. |
 | `toDisplayKey(text)` | يُزيل التطويل فقط. يحافظ على التشكيل. |
 | `toSlug(text)` | معرّف URL عربي آمن. |
 | `normalizeName(text)` | تطبيع الأسماء. يحافظ على ى و ة. |
@@ -67,20 +69,64 @@ normalizeDigits('123', 'eastern'); // → '١٢٣'
 | `normalizeDigits(text, to)` | تحويل الأرقام: `'western'` أو `'eastern'`. |
 | `isArabic(text)` | true إذا كان النص يحتوي على أي حرف عربي. |
 | `arabicRatio(text)` | نسبة الأحرف العربية (0.0–1.0). |
-| `specVersion` | `'1.0.0'` |
+| `specVersion` | `'1.0.1'` |
 
 ---
 
 ## نمط قاعدة البيانات
 
-```typescript
-// عند الحفظ:
-await db.insert({ name, search_key: toSearchKey(name) });
+خزّن النص الأصلي ومفتاحاً صارماً، وأضف عموداً متساهلاً اختيارياً. لا تغيّر `search_key` القائم.
 
-// عند البحث (مطابقة متساهلة):
-const key = toLooseSearchKey(query);
-await db.select().where('search_key', 'like', `%${key}%`);
+```typescript
+// عند الحفظ: النص الأصلي + المفتاحان
+await db.insert({
+  name,                                        // للعرض فقط
+  search_key: toSearchKey(name),               // صارم
+  search_key_loose: toLooseSearchKey(name),    // متساهل
+});
+
+const escapeLike = (value: string): string =>
+  value
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_');
+
+type QueryAdapter = {
+  query: (sql: string, params: unknown[]) => Promise<unknown[]>;
+};
+
+// بحث حرفي: الاستعلام الفارغ يتوقف قبل أي طلب قاعدة بيانات.
+async function searchStudentsLoose(
+  db: QueryAdapter,
+  query: string,
+): Promise<unknown[]> {
+  const key = toLooseSearchKey(query.trim());
+  if (key.length === 0) return [];
+
+  const pattern = `%${escapeLike(key)}%`;
+  return db.query(
+    "select id, name from students where search_key_loose like $1 escape '\\'",
+    [pattern],
+  );
+}
+
+// const rows = await searchStudentsLoose(db, query);
+// للبحث الصارم استخدم toSearchKey و search_key مع نفس الحارس.
 ```
+
+```sql
+ALTER TABLE students ADD COLUMN IF NOT EXISTS search_key_loose text;
+UPDATE students SET search_key_loose = replace(search_key, 'ة', 'ه')
+WHERE search_key IS NOT NULL AND search_key_loose IS NULL;
+
+-- $1 هو النمط الكامل بعد escapeLike، وليس المفتاح الخام
+SELECT id, name FROM students
+WHERE search_key_loose LIKE $1 ESCAPE '\';
+```
+
+`text_pattern_ops` يسرّع البدايات فقط. للاحتواء `%query%` استخدم `pg_trgm` وفهرس GIN/GiST مناسباً. لا تدمج مدخل المستخدم في SQL نصياً. إذا كان الاستعلام فارغاً، لا ترسل `%%`؛ أعد نتيجة فارغة أو تجاوز الفلتر.
+
+> **PostgREST/Supabase:** اختبر R1 محلياً **HTTP مباشر إلى PostgREST 14.10 + PostgreSQL 16**، ووجد أن `\.like()` يحترم فرار `\` لـ `%` و`_` و`\`. لم تُختبر هنا استدعاءات Supabase JS/Dart SDK ولا خدمة Supabase المستضافة. المثال أعلاه يستخدم مشغّل SQL مباشراً؛ إذا استخدمت `.like()` من SDK، أعد اختبار إصدارك.
 
 ---
 

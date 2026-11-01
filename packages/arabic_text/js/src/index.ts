@@ -1,5 +1,5 @@
 // @devsamhan/arabic-text — public API
-// devsamhan-arabic spec v1.0.0
+// devsamhan-arabic spec v1.0.1
 
 export { specVersion } from './normalize';
 export {

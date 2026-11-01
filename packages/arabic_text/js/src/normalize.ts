@@ -1,6 +1,6 @@
-// Arabic text normalization functions — devsamhan-arabic spec v1.0.0
+// Arabic text normalization functions — devsamhan-arabic spec v1.0.1
 
-export const specVersion = '1.0.0';
+export const specVersion = '1.0.1';
 
 // ── removeTashkeel ────────────────────────────────────────────────────────────
 // Ranges per spec:
@@ -56,8 +56,9 @@ export function normalizeTaMarbouta(text: string): string {
 }
 
 // ── normalizeDigits ───────────────────────────────────────────────────────────
-// Eastern Arabic (U+0660–U+0669) and Persian (U+06F0–U+06F9) → Western 0–9
-// Western 0–9 → Eastern Arabic (U+0660–U+0669)
+// Western (U+0030–U+0039), Eastern Arabic (U+0660–U+0669), and Persian
+// (U+06F0–U+06F9) are all accepted as sources for either target.
+// Persian is a source only; there is no Persian output mode.
 export function normalizeDigits(text: string, to: 'western' | 'eastern'): string {
   if (to === 'western') {
     return text.replace(/[٠-٩۰-۹]/g, (ch) => {
@@ -66,9 +67,11 @@ export function normalizeDigits(text: string, to: 'western' | 'eastern'): string
       return String.fromCharCode(0x30 + (cp - base));
     });
   } else {
-    return text.replace(/[0-9]/g, (ch) =>
-      String.fromCharCode(0x0660 + ch.charCodeAt(0) - 0x30)
-    );
+    return text.replace(/[0-9۰-۹]/g, (ch) => {
+      const cp = ch.charCodeAt(0);
+      const base = cp <= 0x39 ? 0x30 : 0x06F0;
+      return String.fromCharCode(0x0660 + (cp - base));
+    });
   }
 }
 

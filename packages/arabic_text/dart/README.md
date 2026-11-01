@@ -2,13 +2,13 @@
 
 مكتبة Dart لتطبيع النص العربي — تشكيل، ألفات، همزات، بحث، فرز.
 
-بدون تبعيات خارجية. متوافقة مع [مواصفات devsamhan-arabic v1.0.0](https://github.com/devsamhan/devsamhan-arabic).
+بدون تبعيات خارجية. متوافقة مع [مواصفات devsamhan-arabic v1.0.1](https://github.com/devsamhan/devsamhan-arabic).
 
 ## التثبيت
 
 ```yaml
 dependencies:
-  arabic_text: ^1.0.0
+  arabic_text: ^1.1.0
 ```
 
 ```dart
@@ -43,15 +43,17 @@ ArabicText.toSearchKey('إِبْرَاهِيمُ');   // → 'ابراهيم'
 ArabicText.toSearchKey('فاطمة العلي');   // → 'فاطمة العلي'
 ```
 
-### `toLooseSearchKey` — مفتاح البحث المتساهل (للاستعلام فقط)
+### `toLooseSearchKey` — مفتاح البحث المتساهل (للطرفين المتساهلين)
 
-مثل `toSearchKey` لكنه يُحوّل **ة → ه** أيضاً. استخدمه على جانب الاستعلام لقبول كلا الشكلين.
+مثل `toSearchKey` لكنه يُحوّل **ة → ه** أيضاً. استخدمه على **المفتاح المخزن المتساهل والاستعلام معاً**؛ لا تستخدمه لمقارنة عمود `toSearchKey` الصارم.
 
 ```dart
 ArabicText.toLooseSearchKey('فاطمة العلي'); // → 'فاطمه العلي'
 ArabicText.toLooseSearchKey('فاطمه');       // → 'فاطمه'
-// كلاهما ينتج 'فاطمه' — المطابقة ستنجح
+// كلاهما ينتج 'فاطمه' — المطابقة ستنجح فقط إذا كان العمود المخزن متساهلاً أيضاً.
 ```
+
+> **تحذير:** `toSearchKey('فاطمة')` ينتج `فاطمة`، بينما `toLooseSearchKey('فاطمه')` ينتج `فاطمه`. مقارنة الاثنين تُرجع `false` دائماً. استخدم إما صارم/صارم أو متساهل/متساهل.
 
 ### `toDisplayKey` — للعرض في الواجهة
 
@@ -110,6 +112,14 @@ ArabicText.normalizeAlef('إبراهيم'); // → 'ابراهيم'
 ArabicText.normalizeAlef('آمنة');    // → 'امنة'
 ```
 
+### `normalizeDigits` — تحويل الأرقام
+
+```dart
+ArabicText.normalizeDigits('١٢٣', to: 'western'); // → '123'
+ArabicText.normalizeDigits('123', to: 'eastern'); // → '١٢٣'
+ArabicText.normalizeDigits('۱۲۳', to: 'eastern'); // → '١٢٣' (الفارسية مصدر)
+```
+
 ---
 
 ## الفرق بين `toSearchKey` و `toLooseSearchKey`
@@ -137,38 +147,73 @@ stored2.contains(query2); // true
 
 ## نمط قاعدة البيانات
 
-خزّن النص الأصلي ومفتاح البحث في عمودين منفصلين. **لا تستبدل النص الأصلي أبداً.**
+خزّن النص الأصلي ومفتاح البحث الصارم في عمودين منفصلين. **لا تستبدل النص الأصلي أبداً، ولا تغيّر `search_key` القائم.**
+
+للمطابقة المتساهلة، أضف عموداً مشتقاً اختيارياً `search_key_loose` (إضافة صريحة، وليس استبدالاً للعمود الصارم):
+
+```sql
+ALTER TABLE students ADD COLUMN IF NOT EXISTS search_key_loose text;
+
+-- املأه على دفعات. القيمة تساوي toLooseSearchKey(name) للصفوف
+-- التي كتبها toSearchKey، لأن toSearchKey يحفظ ة.
+UPDATE students
+SET search_key_loose = replace(search_key, 'ة', 'ه')
+WHERE search_key IS NOT NULL AND search_key_loose IS NULL;
+
+-- للبحث بالبادئة فقط:
+CREATE INDEX IF NOT EXISTS idx_students_loose_prefix
+  ON students (search_key_loose text_pattern_ops);
+
+-- للبحث بالاحتواء (%query%) استخدم pg_trgm وليس text_pattern_ops:
+-- CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- CREATE INDEX idx_students_loose_trgm
+--   ON students USING gin (search_key_loose gin_trgm_ops);
+```
 
 ```dart
-// عند الحفظ في Supabase:
-Future<void> saveStudent(String name) async {
-  await supabase.from('students').insert({
-    'name': name,                               // النص الأصلي للعرض
-    'search_key': ArabicText.toSearchKey(name), // مفتاح البحث للاستعلام
-  });
-}
+// عند الحفظ: النص الأصلي + المفتاحان
+await supabase.from('students').insert({
+  'name': name,                                        // للعرض فقط
+  'search_key': ArabicText.toSearchKey(name),          // صارم
+  'search_key_loose': ArabicText.toLooseSearchKey(name), // متساهل
+});
 
-// عند البحث (مطابقة متساهلة تقبل فاطمة وفاطمه):
-Future<List<Map>> searchStudents(String query) async {
-  final key = ArabicText.toLooseSearchKey(query);
+String escapeLike(String value) => value
+    .replaceAll(r'\', r'\\')
+    .replaceAll('%', r'\%')
+    .replaceAll('_', r'\_');
+
+// البحث المتساهل الحرفي: متساهل/متساهل — لا تستخدم search_key هنا
+Future<List<Map>> searchStudentsLoose(String query) async {
+  final key = ArabicText.toLooseSearchKey(query.trim());
+  if (key.isEmpty) return const [];
+  final pattern = '%${escapeLike(key)}%';
   return await supabase
       .from('students')
       .select()
-      .ilike('search_key', '%$key%');
+      .like('search_key_loose', pattern);
 }
+
+// البحث الصارم: استبدل العمود بـ search_key والمفتاح بـ toSearchKey.
 ```
 
-```sql
--- إنشاء الجدول:
-CREATE TABLE students (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        text NOT NULL,
-  search_key  text NOT NULL,
-  created_at  timestamptz DEFAULT now()
+PostgREST يربط `.like()` بـ PostgreSQL `LIKE`. اختبرنا **HTTP مباشراً** محلياً مع **PostgREST 14.10 + PostgreSQL 16**:
+
+- `*100\%*` طابق `100%` حرفياً فقط؛
+- `*a\_b*` طابق `a_b` حرفياً فقط؛
+- `*back\\slash*` طابق `back\slash` حرفياً.
+
+لم تُختبر استدعاءات Supabase Dart SDK ولا خدمة Supabase المستضافة. لذلك `escapeLike` أعلاه يعمل عبر `.like()` في بيئة PostgREST المختبرة، مع تمرير النمط كقيمة (لا كـ SQL نصي). أعد اختبار إصدارك. للعميل PostgreSQL المباشر:
+
+```dart
+final pattern = '%${escapeLike(key)}%';
+await db.execute(
+  r"select id, name from students where search_key_loose like $1 escape '\'",
+  parameters: [pattern],
 );
-
-CREATE INDEX idx_students_search ON students (search_key text_pattern_ops);
 ```
+
+إذا كان الاستعلام فارغاً، لا ترسل `%%`؛ أعد نتيجة فارغة أو تجاوز الفلتر. أما `text_pattern_ops` فيسرّع البادئات فقط، وليس `%query%`؛ للاحتواء استخدم `pg_trgm`.
 
 ---
 
@@ -177,7 +222,7 @@ CREATE INDEX idx_students_search ON students (search_key text_pattern_ops);
 | الدالة | الوصف |
 |---|---|
 | `toSearchKey(text)` | مفتاح بحث للتخزين. يحافظ على ة. |
-| `toLooseSearchKey(text)` | مثل toSearchKey + ة→ه. للاستعلام فقط. |
+| `toLooseSearchKey(text)` | مثل toSearchKey + ة→ه. للمفتاح المتساهل المخزن والاستعلام معاً. |
 | `toDisplayKey(text)` | يُزيل التطويل فقط. يحافظ على التشكيل. |
 | `toSlug(text)` | معرّف URL عربي آمن. |
 | `normalizeName(text)` | تطبيع الأسماء. يحافظ على ى و ة. |
@@ -194,7 +239,7 @@ CREATE INDEX idx_students_search ON students (search_key text_pattern_ops);
 | `normalizePresentationForms(text)` | أشكال العرض FB50–FEFF → يونيكود قياسي. |
 | `isArabic(text)` | true إذا كان النص يحتوي على أي حرف عربي. |
 | `arabicRatio(text)` | نسبة الأحرف العربية (0.0–1.0). |
-| `specVersion` | `'1.0.0'` |
+| `specVersion` | `'1.0.1'` |
 
 ### `ArabicNormalizeOptions` — تحكم دقيق
 

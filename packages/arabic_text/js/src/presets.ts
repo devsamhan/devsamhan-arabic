@@ -1,4 +1,4 @@
-// Arabic text preset pipelines — devsamhan-arabic spec v1.0.0
+// Arabic text preset pipelines — devsamhan-arabic spec v1.0.1
 //
 // Processing order (mandatory per SPEC §Processing Order):
 //   1. normalizePresentationForms
@@ -40,7 +40,8 @@ export function toSearchKey(text: string): string {
 
 // ── toLooseSearchKey ──────────────────────────────────────────────────────────
 // Like toSearchKey but also converts ة → ه.
-// Use for search query normalization only — never for storage.
+// Use for the loose query and for a derived stored loose key (never compare
+// the result with a strict toSearchKey value; that produces false negatives).
 export function toLooseSearchKey(text: string): string {
   return normalizeTaMarbouta(toSearchKey(text));
 }

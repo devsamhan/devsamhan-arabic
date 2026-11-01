@@ -72,6 +72,7 @@ const FIXTURE_FILES = [
   'numbers.json',
   'mixed_text.json',
   'sorting.json',
+  'robustness.json',
 ];
 
 for (const filename of FIXTURE_FILES) {

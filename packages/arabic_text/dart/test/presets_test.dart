@@ -110,4 +110,52 @@ void main() {
       }
     });
   });
+
+  // ── search matching policy ─────────────────────────────────────────────────
+  // AR-001: strict index must only be queried with a strict query; loose index
+  // must only be queried with a loose query. The cross-mode case is a
+  // deliberate false-negative regression assertion, not a supported pattern.
+  group('search matching policy', () {
+    const stored = 'فاطمة العلي';
+    const queryTa = 'فاطمة';
+    const queryHa = 'فاطمه';
+
+    test('strict/strict matches the same spelling', () {
+      expect(
+        ArabicText.toSearchKey(stored)
+            .contains(ArabicText.toSearchKey(queryTa)),
+        isTrue,
+      );
+    });
+
+    test('loose/loose matches both ta marbouta spellings', () {
+      final looseStored = ArabicText.toLooseSearchKey(stored);
+      expect(
+          looseStored.contains(ArabicText.toLooseSearchKey(queryTa)), isTrue);
+      expect(
+          looseStored.contains(ArabicText.toLooseSearchKey(queryHa)), isTrue);
+    });
+
+    test('strict/loose produces the documented false negative', () {
+      final strictStored = ArabicText.toSearchKey(stored);
+      expect(
+          strictStored.contains(ArabicText.toLooseSearchKey(queryTa)), isFalse);
+      expect(
+          strictStored.contains(ArabicText.toLooseSearchKey(queryHa)), isFalse);
+    });
+
+    test(
+        'loose stored key is derived by ta-marbouta normalization of strict key',
+        () {
+      expect(
+        ArabicText.normalizeTaMarbouta(ArabicText.toSearchKey(stored)),
+        equals(ArabicText.toLooseSearchKey(stored)),
+      );
+    });
+
+    test('conservative strict key still preserves ta marbouta', () {
+      expect(ArabicText.toSearchKey(stored), equals(stored));
+      expect(ArabicText.toSearchKey(queryHa), equals(queryHa));
+    });
+  });
 }

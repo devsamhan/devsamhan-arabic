@@ -177,7 +177,7 @@
       "operation": "toLooseSearchKey",
       "input": "فَاطِمَةُ",
       "expected": "فاطمه",
-      "notes": "Explicit loose search: ta marbouta converted. Use only for query normalization, not storage."
+      "notes": "Explicit loose search: ta marbouta converted. Use for the loose query and a derived loose stored key; never compare with a strict toSearchKey value."
     },
     {
       "id": "sk-loose-002",
@@ -193,6 +193,30 @@
       "input": "مَكَّةُ المُكَرَّمَة",
       "expected": "مكة المكرمة",
       "notes": "Confirms default toSearchKey does NOT convert ة. Compare with sk-loose-002."
+    },
+    {
+      "id": "sk-name-008",
+      "name": "Strict key preserves ha spelling typed by the user",
+      "operation": "toSearchKey",
+      "input": "فاطمه",
+      "expected": "فاطمه",
+      "notes": "Strict/strict matching only. This key must not be compared with a loose query key."
+    },
+    {
+      "id": "sk-loose-004",
+      "name": "toLooseSearchKey on a multi-word stored value",
+      "operation": "toLooseSearchKey",
+      "input": "فاطمة العلي",
+      "expected": "فاطمه العلي",
+      "notes": "Derived loose stored key. Pair with toLooseSearchKey(query), never with toSearchKey(query)."
+    },
+    {
+      "id": "sk-loose-005",
+      "name": "toLooseSearchKey is idempotent on ha spelling",
+      "operation": "toLooseSearchKey",
+      "input": "فاطمه العلي",
+      "expected": "فاطمه العلي",
+      "notes": "Loose/loose matching remains stable for the ه spelling."
     }
   ]
 }

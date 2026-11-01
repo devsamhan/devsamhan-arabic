@@ -1,4 +1,4 @@
-"""devsamhan-arabic-text — Arabic text normalization, devsamhan-arabic spec v1.0.0."""
+"""devsamhan-arabic-text — Arabic text normalization, devsamhan-arabic spec v1.0.1."""
 
 from .normalize import (
     SPEC_VERSION,

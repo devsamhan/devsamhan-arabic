@@ -1,4 +1,4 @@
-"""Arabic text preset pipelines — devsamhan-arabic spec v1.0.0.
+"""Arabic text preset pipelines — devsamhan-arabic spec v1.0.1.
 
 Processing order (mandatory per SPEC §Processing Order):
   1. normalize_presentation_forms
@@ -43,6 +43,12 @@ def to_search_key(text: str) -> str:
 
 
 def to_loose_search_key(text: str) -> str:
+    """Like :func:`to_search_key`, but also converts ة → ه.
+
+    Use for loose queries and for deriving a stored loose key. Never compare
+    the result with a strict ``to_search_key`` value: strict-index/loose-query
+    comparisons produce false negatives for ة/ه spellings.
+    """
     return normalize_ta_marbouta(to_search_key(text))
 
 

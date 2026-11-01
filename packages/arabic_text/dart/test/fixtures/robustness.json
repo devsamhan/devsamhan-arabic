@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "spec_version": 1,
+    "description": "Robustness corpus for documented technical-token and Unicode-preservation behavior",
+    "notes": "These cases lock existing conservative behavior: technical tokens and non-Arabic-letter controls pass through toSearchKey. They do not change any runtime rule. Arabic text is normalized only under the documented pipeline."
+  },
+  "cases": [
+    {
+      "id": "robust-url-001",
+      "name": "URL with Arabic path and query is preserved",
+      "operation": "toSearchKey",
+      "input": "https://example.com/بحث?q=فاطمة&lang=ar",
+      "expected": "https://example.com/بحث?q=فاطمة&lang=ar",
+      "notes": "ASCII URL syntax and Arabic letters are preserved; ة is intentionally preserved by toSearchKey."
+    },
+    {
+      "id": "robust-email-001",
+      "name": "Email address embedded in Arabic text is preserved",
+      "operation": "toSearchKey",
+      "input": "البريد user.name+tag@example.com",
+      "expected": "البريد user.name+tag@example.com"
+    },
+    {
+      "id": "robust-path-001",
+      "name": "Windows path with Arabic segments is preserved",
+      "operation": "toSearchKey",
+      "input": "C:\\Users\\اسم\\ملف.txt",
+      "expected": "C:\\Users\\اسم\\ملف.txt",
+      "notes": "Backslashes, drive syntax, extension, and Arabic letters are preserved."
+    },
+    {
+      "id": "robust-id-001",
+      "name": "Technical identifier is preserved",
+      "operation": "toSearchKey",
+      "input": "ABC_123-XYZ",
+      "expected": "ABC_123-XYZ"
+    },
+    {
+      "id": "robust-json-001",
+      "name": "JSON-like string is preserved",
+      "operation": "toSearchKey",
+      "input": "{\"name\":\"فاطمة\",\"id\":123}",
+      "expected": "{\"name\":\"فاطمة\",\"id\":123}"
+    },
+    {
+      "id": "robust-handle-001",
+      "name": "Social handle with Arabic and ASCII digits is preserved",
+      "operation": "toSearchKey",
+      "input": "@فاطمة_2024",
+      "expected": "@فاطمة_2024"
+    },
+    {
+      "id": "robust-emoji-001",
+      "name": "Non-BMP emoji is preserved beside Arabic text",
+      "operation": "toSearchKey",
+      "input": "محمد 😀",
+      "expected": "محمد 😀",
+      "notes": "Emoji is U+1F600; no normalization is applied to it."
+    },
+    {
+      "id": "robust-blank-001",
+      "name": "Whitespace-only input collapses to empty",
+      "operation": "toSearchKey",
+      "input": "\t\n  \r",
+      "expected": ""
+    },
+    {
+      "id": "robust-zwj-001",
+      "name": "ZWJ and ZWNJ controls are preserved",
+      "operation": "toSearchKey",
+      "input": "م\u200Dح\u200Cم\u200Dد",
+      "expected": "م\u200Dح\u200Cم\u200Dد",
+      "notes": "U+200D/U+200C are format controls outside the Arabic letter normalization set."
+    },
+    {
+      "id": "robust-bidi-001",
+      "name": "LRM and RLM controls are preserved",
+      "operation": "toSearchKey",
+      "input": "\u200Fمحمد\u200E",
+      "expected": "\u200Fمحمد\u200E",
+      "notes": "U+200E/U+200F are bidi controls outside the Arabic letter normalization set."
+    },
+    {
+      "id": "robust-combining-001",
+      "name": "Non-Arabic combining mark is preserved",
+      "operation": "toSearchKey",
+      "input": "م\u0301حمد",
+      "expected": "م\u0301حمد",
+      "notes": "U+0301 is a combining mark outside the documented Arabic tashkeel ranges."
+    }
+  ]
+}
