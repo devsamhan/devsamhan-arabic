@@ -28,13 +28,15 @@ dependencies:
 ```dart
 import 'package:arabic_text/arabic_text.dart';
 
-// مفتاح بحث للتخزين في قاعدة البيانات
+// مفتاح بحث صارم للتخزين في قاعدة البيانات
 ArabicText.toSearchKey('مُحَمَّدٌ');          // → 'محمد'
 ArabicText.toSearchKey('فاطمة العلي');       // → 'فاطمة العلي'
 
-// مفتاح متساهل للاستعلام (يطابق فاطمة وفاطمه)
+// مفتاح متساهل: استخدمه على المفتاح المخزن المتساهل والاستعلام معاً
 ArabicText.toLooseSearchKey('فاطمه');        // → 'فاطمه'
-ArabicText.toLooseSearchKey('فاطمة');        // → 'فاطمه' ← تطابق!
+ArabicText.toLooseSearchKey('فاطمة');        // → 'فاطمه'
+// ⚠️ لا تقارن هذا المفتاح بعمود toSearchKey الصارم؛ هذا ينتج نتيجة سلبية خاطئة.
+// راجع docs/arabic_guide.md لنمط قاعدة البيانات الآمن.
 
 // slug لـ URL
 ArabicText.toSlug('مدينة الرياض');           // → 'مدينه-الرياض'

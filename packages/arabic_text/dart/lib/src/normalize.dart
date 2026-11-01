@@ -1,11 +1,11 @@
-/// Arabic text normalization functions — devsamhan-arabic spec v1.0.0
+/// Arabic text normalization functions — devsamhan-arabic spec v1.0.1
 library;
 
 // ── Spec version ──────────────────────────────────────────────────────────────
 
 /// Must match the SPEC.md version field. All conformant implementations must
 /// expose this constant.
-const String specVersion = '1.0.0';
+const String specVersion = '1.0.1';
 
 // ── normalizeTaMarbouta ───────────────────────────────────────────────────────
 
@@ -296,13 +296,13 @@ const Map<int, String> _presentationFormsMap = {
 
 // ── normalizeDigits ───────────────────────────────────────────────────────────
 
-/// Convert digits between Eastern Arabic / Persian and Western forms.
+/// Convert digits between Western, Eastern Arabic, and Persian forms.
 ///
 /// [to] must be `'western'` or `'eastern'`.
 ///
-/// Eastern Arabic (U+0660–U+0669) and Extended Persian (U+06F0–U+06F9) are
-/// both treated as source forms for `to: 'western'`.
-/// Only Western digits (0–9) are converted for `to: 'eastern'`.
+/// Western (U+0030–U+0039), Eastern Arabic (U+0660–U+0669), and Extended
+/// Persian (U+06F0–U+06F9) are all accepted as sources for either target.
+/// Persian is a source only; there is no Persian output mode.
 String normalizeDigits(String text, {required String to}) {
   switch (to) {
     case 'western':
@@ -316,8 +316,12 @@ String normalizeDigits(String text, {required String to}) {
       );
     case 'eastern':
       return text.replaceAllMapped(
-        RegExp(r'[0-9]'),
-        (m) => String.fromCharCode(0x0660 + m[0]!.codeUnitAt(0) - 0x30),
+        RegExp('[0-9۰-۹]'),
+        (m) {
+          final cp = m[0]!.codeUnitAt(0);
+          final base = cp <= 0x39 ? 0x30 : 0x06F0;
+          return String.fromCharCode(0x0660 + (cp - base));
+        },
       );
     default:
       return text;

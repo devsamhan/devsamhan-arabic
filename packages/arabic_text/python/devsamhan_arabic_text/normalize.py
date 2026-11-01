@@ -1,8 +1,8 @@
-"""Arabic text normalization functions — devsamhan-arabic spec v1.0.0."""
+"""Arabic text normalization functions — devsamhan-arabic spec v1.0.1."""
 
 import re
 
-SPEC_VERSION = "1.0.0"
+SPEC_VERSION = "1.0.1"
 
 # U+064B–U+065F, U+0610–U+061A, U+06D6–U+06DC, U+06DF–U+06ED
 _TASHKEEL_RE = re.compile(
@@ -13,7 +13,7 @@ _TASHKEEL_RE = re.compile(
 _TATWEEL_RE = re.compile("ـ(?!ٰ)")
 
 _DIGITS_TO_WESTERN_RE = re.compile("[٠-٩۰-۹]")
-_DIGITS_TO_EASTERN_RE = re.compile("[0-9]")
+_DIGITS_TO_EASTERN_RE = re.compile("[0-9۰-۹]")
 
 _ARABIC_RE = re.compile("[؀-ۿ]")
 
@@ -57,6 +57,12 @@ def normalize_ta_marbouta(text: str) -> str:
 
 
 def normalize_digits(text: str, to: str) -> str:
+    """Convert digits between Western, Eastern Arabic, and Persian forms.
+
+    Both targets accept Western (U+0030-U+0039), Eastern Arabic
+    (U+0660-U+0669), and Persian (U+06F0-U+06F9) as sources. Persian is a
+    source only; there is no Persian output mode.
+    """
     if to == "western":
         def _to_western(m: re.Match) -> str:
             cp = ord(m.group())
@@ -64,9 +70,11 @@ def normalize_digits(text: str, to: str) -> str:
             return chr(0x30 + (cp - base))
         return _DIGITS_TO_WESTERN_RE.sub(_to_western, text)
     else:
-        return _DIGITS_TO_EASTERN_RE.sub(
-            lambda m: chr(0x0660 + ord(m.group()) - 0x30), text
-        )
+        def _to_eastern(m: re.Match) -> str:
+            cp = ord(m.group())
+            base = 0x30 if cp <= 0x39 else 0x06F0
+            return chr(0x0660 + (cp - base))
+        return _DIGITS_TO_EASTERN_RE.sub(_to_eastern, text)
 
 
 def normalize_presentation_forms(text: str) -> str:

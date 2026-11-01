@@ -157,6 +157,14 @@
       "operation": "arabicRatio",
       "input": "Hello",
       "expected": 0.0
+    },
+    {
+      "id": "slug-005",
+      "name": "toSlug preserves Eastern Arabic digits (guide example)",
+      "operation": "toSlug",
+      "input": "مقالة: أبرز الأحداث في ٢٠٢٤",
+      "expected": "مقاله-ابرز-الاحداث-في-٢٠٢٤",
+      "notes": "AR-015: toSlug does not normalize digits; Eastern input stays Eastern."
     }
   ]
 }

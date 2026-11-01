@@ -14,6 +14,7 @@ _FIXTURE_FILES = [
     "numbers.json",
     "mixed_text.json",
     "sorting.json",
+    "robustness.json",
 ]
 
 
@@ -22,47 +23,45 @@ def _run_case(c: dict) -> object:
     inp = c["input"]
     opts = c.get("options", {})
 
-    match op:
-        case "removeTashkeel":
-            return api.remove_tashkeel(inp)
-        case "removeTatweel":
-            return api.remove_tatweel(inp)
-        case "normalizeAlef":
-            return api.normalize_alef(inp)
-        case "normalizeHamza":
-            return api.normalize_hamza(inp)
-        case "normalizeYa":
-            return api.normalize_ya(inp)
-        case "normalizeTaMarbouta":
-            return api.normalize_ta_marbouta(inp)
-        case "normalizePresentationForms":
-            return api.normalize_presentation_forms(inp)
-        case "normalizeDigits":
-            return api.normalize_digits(inp, opts["to"])
-        case "toSearchKey":
-            return api.to_search_key(inp)
-        case "toLooseSearchKey":
-            return api.to_loose_search_key(inp)
-        case "toDisplayKey":
-            return api.to_display_key(inp)
-        case "toSlug":
-            return api.to_slug(inp)
-        case "normalizeName":
-            return api.normalize_name(inp)
-        case "toSortKey":
-            if isinstance(inp, list):
-                return [api.to_sort_key(s) for s in inp]
-            return api.to_sort_key(inp)
-        case "sort":
-            return api.sort_arabic(inp)
-        case "compare":
-            return api.compare_arabic(inp[0], inp[1])
-        case "isArabic":
-            return api.is_arabic(inp)
-        case "arabicRatio":
-            return api.arabic_ratio(inp)
-        case _:
-            raise ValueError(f"Unknown operation: {op}")
+    if op == "removeTashkeel":
+        return api.remove_tashkeel(inp)
+    elif op == "removeTatweel":
+        return api.remove_tatweel(inp)
+    elif op == "normalizeAlef":
+        return api.normalize_alef(inp)
+    elif op == "normalizeHamza":
+        return api.normalize_hamza(inp)
+    elif op == "normalizeYa":
+        return api.normalize_ya(inp)
+    elif op == "normalizeTaMarbouta":
+        return api.normalize_ta_marbouta(inp)
+    elif op == "normalizePresentationForms":
+        return api.normalize_presentation_forms(inp)
+    elif op == "normalizeDigits":
+        return api.normalize_digits(inp, opts["to"])
+    elif op == "toSearchKey":
+        return api.to_search_key(inp)
+    elif op == "toLooseSearchKey":
+        return api.to_loose_search_key(inp)
+    elif op == "toDisplayKey":
+        return api.to_display_key(inp)
+    elif op == "toSlug":
+        return api.to_slug(inp)
+    elif op == "normalizeName":
+        return api.normalize_name(inp)
+    elif op == "toSortKey":
+        if isinstance(inp, list):
+            return [api.to_sort_key(s) for s in inp]
+        return api.to_sort_key(inp)
+    elif op == "sort":
+        return api.sort_arabic(inp)
+    elif op == "compare":
+        return api.compare_arabic(inp[0], inp[1])
+    elif op == "isArabic":
+        return api.is_arabic(inp)
+    elif op == "arabicRatio":
+        return api.arabic_ratio(inp)
+    raise ValueError(f"Unknown operation: {op}")
 
 
 def _load_cases() -> list[tuple[str, dict]]:

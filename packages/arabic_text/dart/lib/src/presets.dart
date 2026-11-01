@@ -1,4 +1,4 @@
-/// Arabic text preset pipelines — devsamhan-arabic spec v1.0.0
+/// Arabic text preset pipelines — devsamhan-arabic spec v1.0.1
 ///
 /// Processing order (SPEC §Processing Order — mandatory):
 ///   1. normalizePresentationForms
@@ -91,11 +91,11 @@ String normalizeName(String text) {
 
 /// Like [toSearchKey], but also normalizes Ta Marbouta (ة → ه).
 ///
-/// Use for search *query* normalization when you want فاطمة and فاطمه to match.
+/// Use for the loose query and for deriving a stored loose key (for example a
+/// `search_key_loose` column) when you want فاطمة and فاطمه to match.
 ///
-/// ⚠️ Never use for storage. Only normalize the query side with this function.
-/// Store records using [toSearchKey]; search using [toLooseSearchKey] on both
-/// the stored key and the incoming query.
+/// Never compare the result with a [toSearchKey] value:
+/// strict-index/loose-query is a false-negative pattern.
 String toLooseSearchKey(String text) => normalizeTaMarbouta(toSearchKey(text));
 
 // ── toSortKey ─────────────────────────────────────────────────────────────────

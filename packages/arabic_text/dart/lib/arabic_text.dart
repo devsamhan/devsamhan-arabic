@@ -1,4 +1,4 @@
-/// Arabic text normalization library — devsamhan-arabic spec v1.0.0.
+/// Arabic text normalization library — devsamhan-arabic spec v1.0.1.
 ///
 /// Primary entry point: [ArabicText] static class.
 library arabic_text;
@@ -54,11 +54,12 @@ abstract final class ArabicText {
   static String normalizeTaMarbouta(String text) =>
       _n.normalizeTaMarbouta(text);
 
-  /// Convert digits between Eastern Arabic / Persian and Western forms.
+  /// Convert digits between Western, Eastern Arabic, and Persian forms.
   ///
-  /// [to] must be `'western'` or `'eastern'`. Eastern Arabic (U+0660–U+0669)
-  /// and Extended Persian (U+06F0–U+06F9) are both recognized as source forms
-  /// when converting to Western.
+  /// [to] must be `'western'` or `'eastern'`. Western (U+0030–U+0039),
+  /// Eastern Arabic (U+0660–U+0669), and Extended Persian (U+06F0–U+06F9) are
+  /// all recognized as sources for either target. Persian is a source only;
+  /// there is no Persian output mode.
   static String normalizeDigits(String text, {required String to}) =>
       _n.normalizeDigits(text, to: to);
 
@@ -75,9 +76,10 @@ abstract final class ArabicText {
 
   /// Like [toSearchKey] but also converts ة → ه.
   ///
-  /// Use for query normalization only, not storage. Store records with
-  /// [toSearchKey]; normalize the incoming query with [toLooseSearchKey]
-  /// so that فاطمة and فاطمه match the same records.
+  /// Use this for the loose query and for deriving a stored loose key
+  /// (for example a `search_key_loose` column). Never compare the result
+  /// with a key produced by [toSearchKey]: strict-index/loose-query
+  /// comparisons produce false negatives for ة/ه spellings.
   static String toLooseSearchKey(String text) => _p.toLooseSearchKey(text);
 
   /// Clean text for display — removes tatweel and collapses whitespace.

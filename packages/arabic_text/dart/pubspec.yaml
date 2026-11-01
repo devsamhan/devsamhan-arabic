@@ -2,8 +2,8 @@ name: arabic_text
 description: >-
   Arabic text normalization — tashkeel, alef, hamza, ya, ta marbouta, search
   keys, sort keys. Zero dependencies. Conformant with devsamhan-arabic spec
-  v1.0.0.
-version: 1.0.0
+  v1.0.1.
+version: 1.1.0
 
 homepage: https://github.com/devsamhan/devsamhan-arabic
 repository: https://github.com/devsamhan/devsamhan-arabic

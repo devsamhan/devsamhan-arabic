@@ -98,26 +98,49 @@ void main() {
 
 **نمط قاعدة البيانات الصحيح:**
 
-خزّن **عمودين**: النص الأصلي للعرض، ومفتاح البحث للاستعلام. لا تستبدل النص الأصلي أبداً.
+خزّن النص الأصلي للعرض، ومفتاحاً صارماً للبحث الصارم، وعموداً متساهلاً **اختيارياً** للبحث المتساهل. لا تستبدل النص الأصلي أبداً، ولا تغيّر `search_key` القائم.
 
 ```dart
 // عند الحفظ في Supabase أو أي قاعدة بيانات:
 Future<void> saveStudent(String name) async {
   await supabase.from('students').insert({
-    'name': name,                          // النص الأصلي للعرض
-    'search_key': ArabicText.toSearchKey(name), // للاستعلام السريع
+    'name': name,                                          // النص الأصلي للعرض
+    'search_key': ArabicText.toSearchKey(name),            // صارم
+    'search_key_loose': ArabicText.toLooseSearchKey(name), // اختياري للمطابقة المتساهلة
   });
 }
 
-// عند البحث:
-Future<List<Map>> searchStudents(String query) async {
-  final key = ArabicText.toLooseSearchKey(query); // متساهل للاستعلام
-  return await supabase
-      .from('students')
-      .select()
-      .ilike('search_key', '%$key%');
+String escapeLike(String value) => value
+    .replaceAll(r'\', r'\\')
+    .replaceAll('%', r'\%')
+    .replaceAll('_', r'\_');
+
+// البحث الحرفي: صارم/صارم أو متساهل/متساهل.
+Future<List<Map>> searchStudents(String query, {required bool loose}) async {
+  final key = loose
+      ? ArabicText.toLooseSearchKey(query.trim())
+      : ArabicText.toSearchKey(query.trim());
+  if (key.isEmpty) return const [];
+  final pattern = '%${escapeLike(key)}%';
+  final column = loose ? 'search_key_loose' : 'search_key';
+  return await supabase.from('students').select().like(column, pattern);
 }
 ```
+
+اختبرنا **HTTP مباشراً** إلى `.like()` محلياً مع **PostgREST 14.10 + PostgreSQL 16**: النمط `*100\%*` طابق `100%` حرفياً فقط، و`*a\_b*` طابق `a_b` حرفياً فقط، و`*back\\slash*` طابق `back\slash` حرفياً. لم تُختبر استدعاءات Supabase SDK أو الخدمة المستضافة؛ أعد اختبار إصدارك إذا اختلف.
+
+```sql
+ALTER TABLE students ADD COLUMN IF NOT EXISTS search_key_loose text;
+UPDATE students SET search_key_loose = replace(search_key, 'ة', 'ه')
+WHERE search_key IS NOT NULL AND search_key_loose IS NULL;
+
+-- للبحث بالبادئة فقط:
+CREATE INDEX IF NOT EXISTS idx_students_loose_prefix
+  ON students (search_key_loose text_pattern_ops);
+-- للاحتواء %query% استخدم pg_trgm وليس text_pattern_ops.
+```
+
+> **تحذير:** `toSearchKey('فاطمة')` ينتج `فاطمة`، و`toLooseSearchKey('فاطمه')` ينتج `فاطمه`. مقارنة الاثنين تُرجع `false`؛ استخدم صارم/صارم أو متساهل/متساهل. لا ترسل استعلاماً فارغاً كـ `%%`. حالة تكامل PostgreSQL/Supabase **UNVERIFIED** في هذا المستودع؛ الأمثلة تتبع توثيق PostgreSQL ولا تدّعي اختباراً حياً.
 
 ---
 
@@ -179,7 +202,7 @@ void main() {
   print(ArabicText.toSlug(name)); // محمد-الاحمد
 
   final title = 'مقالة: أبرز الأحداث في ٢٠٢٤';
-  print(ArabicText.toSlug(title)); // مقاله-ابرز-الاحداث-في-2024
+  print(ArabicText.toSlug(title)); // مقاله-ابرز-الاحداث-في-٢٠٢٤
 }
 ```
 
@@ -861,7 +884,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
 `toSearchKey` يحافظ على ة عمداً — وهو السلوك الصحيح **لتخزين** مفاتيح البحث.
 
-`toLooseSearchKey` يُحوّل ة→ه — وهو مناسب **لاستعلام** المستخدم فقط، عندما تريد مطابقة مرنة بغض النظر عن الشكل. طبّقه على الاستعلام وعلى البيانات المُستعلَم عنها في آنٍ واحد.
+`toLooseSearchKey` يُحوّل ة→ه — وهو مناسب للمطابقة المرنة عندما تقبل الشكلين. طبّقه على **المفتاح المخزن المتساهل والاستعلام معاً**؛ لا تقارنه بعمود `toSearchKey` الصارم.
 
 ---
 
@@ -887,7 +910,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
 
 ### كيف أستخدم المكتبات مع Supabase؟
 
-**نمط الحفظ:** احفظ النص الأصلي ومفتاح البحث في عمودين منفصلين.
+**نمط الحفظ:** احفظ النص الأصلي ومفتاح البحث الصارم في عمودين منفصلين. أضف مفتاحاً متساهلاً **اختيارياً** إن أردت مطابقة ة/ه. لا تغيّر المفاتيح الصارمة القائمة.
 
 ```dart
 import 'package:arabic_text/arabic_text.dart';
@@ -895,55 +918,66 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
-// حفظ طالب جديد:
+// حفظ طالب جديد: النص الأصلي + المفتاحان (المتساهل اختياري)
 Future<void> insertStudent({
   required String fullName,
   required String city,
 }) async {
   await supabase.from('students').insert({
-    'full_name': fullName,                             // للعرض
-    'name_search_key': ArabicText.toSearchKey(fullName), // للبحث الصارم
+    'full_name': fullName,                                      // للعرض
+    'name_search_key': ArabicText.toSearchKey(fullName),        // صارم
+    'name_search_key_loose': ArabicText.toLooseSearchKey(fullName),
     'city': city,
     'city_search_key': ArabicText.toSearchKey(city),
+    'city_search_key_loose': ArabicText.toLooseSearchKey(city),
   });
 }
 
-// بحث بمطابقة متساهلة (يقبل فاطمة وفاطمه):
+String escapeLike(String value) => value
+    .replaceAll(r'\', r'\\')
+    .replaceAll('%', r'\%')
+    .replaceAll('_', r'\_');
+
+// بحث متساهل حرفي: متساهل/متساهل — لا تستخدم name_search_key هنا
 Future<List<Map<String, dynamic>>> searchStudents(String query) async {
-  final key = ArabicText.toLooseSearchKey(query);
+  final key = ArabicText.toLooseSearchKey(query.trim());
+  if (key.isEmpty) return const [];
+  final pattern = '%${escapeLike(key)}%';
   return await supabase
       .from('students')
       .select('full_name, city')
-      .ilike('name_search_key', '%$key%');
-  // ملاحظة: ilike يعمل هنا لأن مفاتيح البحث لا تحتوي على أحرف كبيرة/صغيرة
+      .like('name_search_key_loose', pattern);
 }
 
-// ترتيب النتائج:
+// ترتيب النتائج بالمفتاح الصارم:
 Future<List<String>> getSortedNames() async {
   final rows = await supabase
       .from('students')
       .select('full_name')
-      .order('name_search_key', ascending: true); // الترتيب في قاعدة البيانات
+      .order('name_search_key', ascending: true);
   return rows.map<String>((r) => r['full_name'] as String).toList();
 }
 ```
 
-**إنشاء الجدول في Supabase:**
+**إضافة الأعمدة في Supabase (اختيارية وغير هدّامة):**
 
 ```sql
-CREATE TABLE students (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  full_name   text NOT NULL,
-  name_search_key text NOT NULL,  -- ArabicText.toSearchKey(full_name)
-  city        text,
-  city_search_key text,           -- ArabicText.toSearchKey(city)
-  created_at  timestamptz DEFAULT now()
-);
+ALTER TABLE students
+  ADD COLUMN IF NOT EXISTS name_search_key_loose text,
+  ADD COLUMN IF NOT EXISTS city_search_key_loose text;
 
--- فهرس للبحث السريع:
-CREATE INDEX idx_students_name ON students (name_search_key text_pattern_ops);
-CREATE INDEX idx_students_city ON students (city_search_key text_pattern_ops);
+UPDATE students
+SET name_search_key_loose = replace(name_search_key, 'ة', 'ه'),
+    city_search_key_loose = replace(city_search_key, 'ة', 'ه')
+WHERE name_search_key IS NOT NULL;
+
+-- بادئة فقط:
+CREATE INDEX IF NOT EXISTS idx_students_name_loose_prefix
+  ON students (name_search_key_loose text_pattern_ops);
+-- للاحتواء %query% استخدم pg_trgm، وليس text_pattern_ops.
 ```
+
+`escapeLike` أعلاه يفرّ `\` ثم `%` ثم `_`، ويُمرَّر الناتج كقيمة نمط إلى `.like()`؛ لا تدمج نص المستخدم في SQL. استعلام فارغ يُعاد قبل الإرسال (`key.isEmpty`). تحققنا من **HTTP مباشر** إلى PostgREST 14.10 + PostgreSQL 16 محلياً؛ لم تُختبر استدعاءات SDK أو الخدمة المستضافة، فأعد الاختبار إذا كان إصدارك مختلفاً.
 
 ---
 
