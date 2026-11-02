@@ -8,11 +8,6 @@ on:
       - 'tools/**'
       - '.github/workflows/arabic_text.yml'
   pull_request:
-    paths:
-      - 'packages/arabic_text/**'
-      - 'test_fixtures/**'
-      - 'tools/**'
-      - '.github/workflows/arabic_text.yml'
 
 permissions:
   contents: read
